@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Matières — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Matières</h1>
+    <p class="muted">Référentiel des matières de l'école</p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn" href="{% url 'school:subject_create' school.organization.slug school.code %}">Nouvelle matière</a>
+    <a class="btn btn-secondary" href="{% url 'school:curriculum_list' school.organization.slug school.code %}">Coefficients</a>
+    <a class="btn btn-secondary" href="{% url 'school:structure' school.organization.slug school.code %}">Structure</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if subjects %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Matière</th>
+            <th class="numeric">Programmes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject in subjects %}
+            <tr>
+              <td>{{ subject.code }}</td>
+              <td>{{ subject.name }}</td>
+              <td class="numeric">{{ subject.usage_count }}</td>
+              <td>
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:subject_edit' school.organization.slug school.code subject.id %}">Modifier</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Aucune matière enregistrée.
+      <a href="{% url 'school:subject_create' school.organization.slug school.code %}">Créer la première matière</a>.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

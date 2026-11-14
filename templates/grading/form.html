@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{% url 'school:grading_home' school.organization.slug school.code %}">← Notes et bulletins</a></div>
+<div class="page-head">
+  <div><h1>{{ title }}</h1><p class="muted">{{ intro }}</p></div>
+</div>
+<section class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Enregistrer</button>
+      <a class="btn btn-secondary" href="{% url cancel_url school.organization.slug school.code %}">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

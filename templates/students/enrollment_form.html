@@ -1,0 +1,38 @@
+{% extends "generic_form.html" %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+  (function () {
+    const yearSelect = document.getElementById("id_academic_year");
+    const classSelect = document.getElementById("id_school_class");
+    if (!yearSelect || !classSelect) return;
+
+    const options = Array.from(classSelect.options);
+
+    function filterClasses() {
+      const yearOption = yearSelect.options[yearSelect.selectedIndex];
+      const yearLabel = yearOption ? yearOption.textContent.trim() : "";
+      let selectedVisible = false;
+
+      options.forEach(function (option) {
+        if (!option.value) return;
+        const matches = !yearLabel || option.textContent.indexOf(yearLabel + " ·") === 0;
+        option.hidden = !matches;
+        option.disabled = !matches;
+        if (option.selected && matches) selectedVisible = true;
+      });
+
+      if (!selectedVisible) {
+        const firstVisible = options.find(function (option) {
+          return option.value && !option.disabled;
+        });
+        classSelect.value = firstVisible ? firstVisible.value : "";
+      }
+    }
+
+    yearSelect.addEventListener("change", filterClasses);
+    filterClasses();
+  })();
+</script>
+{% endblock %}

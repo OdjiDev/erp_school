@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Rouvrir la période — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{% url 'school:grading_home' school.organization.slug school.code %}">← Notes et bulletins</a></div>
+<div class="page-head">
+  <div><h1>Rouvrir {{ period.name }}</h1><p class="muted">{{ period.academic_year.name }}</p></div>
+</div>
+<div class="callout">Les bulletins déjà figés resteront archivés. Après correction, une nouvelle clôture créera une nouvelle version.</div>
+<section class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Rouvrir la période</button>
+      <a class="btn btn-secondary" href="{% url 'school:grading_home' school.organization.slug school.code %}">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

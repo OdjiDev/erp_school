@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Enseignants — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Enseignants</h1>
+    <p class="muted">
+      {{ total_count }} enseignant{{ total_count|pluralize }}
+      {% if current_year %} · affectations {{ current_year.name }}{% endif %}
+    </p>
+  </div>
+  <div class="actions no-print">
+    {% if can_manage_users %}
+      <a class="btn" href="{% url 'school:user_create' school.organization.slug school.code %}">Nouvel utilisateur</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:user_list' school.organization.slug school.code %}">Utilisateurs</a>
+    <a class="btn btn-secondary" href="{% url 'school:class_list' school.organization.slug school.code %}">Classes</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="q">Recherche</label>
+      <input type="search" id="q" name="q" value="{{ query }}"
+             placeholder="Nom, identifiant ou email">
+    </div>
+    <button class="btn" type="submit">Filtrer</button>
+    {% if query %}
+      <a class="btn btn-secondary"
+         href="{% url 'school:teacher_list' school.organization.slug school.code %}">Réinitialiser</a>
+    {% endif %}
+  </form>
+
+  {% if teachers %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Enseignant</th>
+            <th>Identifiant</th>
+            <th>Email</th>
+            <th>Portée</th>
+            <th class="numeric">Affectations</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for teacher in teachers %}
+            <tr>
+              <td>{{ teacher.get_full_name|default:teacher.get_username }}</td>
+              <td>{{ teacher.get_username }}</td>
+              <td>{{ teacher.email|default:"—" }}</td>
+              <td>{% if teacher.org_wide %}Toute l'organisation{% else %}Cette école{% endif %}</td>
+              <td class="numeric">{{ teacher.assignment_count }}</td>
+              <td>
+                {% if can_manage_users %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:user_edit' school.organization.slug school.code teacher.id %}">Compte</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      Aucun enseignant actif dans cette école.
+      {% if can_manage_users %}
+        <a href="{% url 'school:user_create' school.organization.slug school.code %}">Créer un compte enseignant</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Bulletin — {{ bulletin.student.full_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head no-print">
+  <div><h1>Bulletin scolaire</h1><p class="muted">{{ bulletin.period_name|default:period.name }} · {{ period.academic_year.name }}{% if bulletin.snapshot_version %} · Version figée {{ bulletin.snapshot_version }}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'school:report_card_list' school.organization.slug school.code %}?periode={{ period.id }}&classe={{ bulletin.enrollment.school_class.id }}">Retour à la classe</a>
+    {% if request.can_manage_structure %}<a class="btn btn-secondary" href="{% url 'school:curriculum_list' school.organization.slug school.code %}?annee={{ bulletin.enrollment.academic_year.id }}&niveau={{ bulletin.enrollment.school_class.level.id }}&serie={{ bulletin.enrollment.school_class.series.id }}">Coefficients</a>{% endif %}
+    <button class="btn" type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+  </div>
+</div>
+
+<article class="report-card">
+  {% if snapshot_versions|length > 1 %}<div class="no-print report-version-list">Versions archivées : {% for version in snapshot_versions %}<a href="?version={{ version }}">v{{ version }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+  <header class="report-heading">
+    <div>
+      <h1>{{ school.name }}</h1>
+      <p>{{ school.organization.name }}{% if school.code %} · {{ school.code }}{% endif %}</p>
+    </div>
+    <div class="report-period"><strong>BULLETIN DE NOTES</strong><span>{{ bulletin.period_name|default:period.name }}</span><span>{{ period.academic_year.name }}</span></div>
+  </header>
+
+  <section class="report-student">
+    <div><span class="report-label">Élève</span><strong>{{ bulletin.student.last_name }} {{ bulletin.student.first_name }}</strong></div>
+    <div><span class="report-label">Matricule</span><strong>{{ bulletin.student.matricule }}</strong></div>
+    <div><span class="report-label">Classe</span><strong>{{ bulletin.class_name|default:bulletin.enrollment.school_class.display_name }}</strong></div>
+    <div><span class="report-label">Rang</span><strong>{% if bulletin.rank %}{{ bulletin.rank }} / {{ class_size }}{% else %}—{% endif %}</strong></div>
+  </section>
+
+  <section class="report-decision">
+    <strong>Décision du conseil</strong>
+    {% if bulletin.deliberation_label %}
+      <span>{{ bulletin.deliberation_label }}</span>
+      {% if bulletin.deliberation_comment %}<p>{{ bulletin.deliberation_comment }}</p>{% endif %}
+    {% else %}<span>Non délibéré</span>{% endif %}
+  </section>
+
+  <div class="table-wrap">
+    <table class="report-table">
+      <thead><tr><th>Matière</th><th>Moyenne / 20</th><th>Coefficient</th><th>Points</th><th>Évaluations</th><th>Abs.</th><th>Disp.</th></tr></thead>
+      <tbody>
+        {% for row in bulletin.rows %}
+          <tr>
+            <td>{{ row.subject.name }}</td>
+            <td>{{ row.average|default_if_none:"—" }}</td>
+            <td>{{ row.coefficient }}</td>
+            <td>{{ row.points|default_if_none:"—" }}</td>
+            <td>{{ row.recorded_count }}</td>
+            <td>{{ row.absence_count }}</td>
+            <td>{{ row.excused_count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="2">Moyenne générale</th><th>{{ bulletin.coefficient_total }}</th><th colspan="2">{{ bulletin.general_average|default_if_none:"—" }} / 20</th><th colspan="2">Rang : {% if bulletin.rank %}{{ bulletin.rank }}{% else %}—{% endif %}</th></tr></tfoot>
+    </table>
+  </div>
+
+  <p class="report-note">Moyenne générale calculée sur {{ bulletin.subjects_counted }} matière(s) notée(s) avec coefficient configuré, sur {{ bulletin.subjects_count }}. {{ bulletin.subjects_with_average }} matière(s) comportent des notes.</p>
+  {% if bulletin.unconfigured_coefficient_count %}<div class="callout report-warning">{{ bulletin.unconfigured_coefficient_count }} matière(s) notée(s) n'ont pas de coefficient dans le programme et ne sont pas incluses dans la moyenne générale. Complétez le programme de coefficients avant validation du bulletin.</div>{% endif %}
+  <p class="report-note">Les évaluations affichées ont été publiées par l'établissement. Les absences et dispenses sans note sont exclues du calcul; une note zéro peut être saisie pour appliquer une pénalité prévue par le règlement de l'école.</p>
+
+  <section class="report-signatures">
+    <div>Le professeur principal</div><div>La direction</div><div>Signature du parent / tuteur</div>
+  </section>
+  <footer class="report-footer">Édité le {{ today|date:"d/m/Y" }} · Document généré par le système de gestion scolaire</footer>
+</article>
+{% endblock %}

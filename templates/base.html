@@ -1,0 +1,82 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Gestion scolaire{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="{% url 'school:home' %}">
+        <span class="brand-mark">GS</span>
+        <span>Gestion scolaire</span>
+      </a>
+
+      {% if school %}
+        <div class="school-context">
+          <span class="school-context-name">{{ school.name }}</span>
+          <span class="school-context-code">{{ school.code }}</span>
+        </div>
+        <nav class="main-nav" aria-label="Navigation principale">
+          <a class="nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}"
+             href="{% url 'school:dashboard' school.organization.slug school.code %}">Tableau de bord</a>
+          {% if request.can_manage_structure %}
+            <a class="nav-link{% if 'structure' in request.resolver_match.url_name or 'subject' in request.resolver_match.url_name or 'curriculum' in request.resolver_match.url_name %} active{% endif %}"
+               href="{% url 'school:structure' school.organization.slug school.code %}">Structure</a>
+          {% endif %}
+          <a class="nav-link{% if 'student' in request.resolver_match.url_name or 'guardian' in request.resolver_match.url_name %} active{% endif %}"
+             href="{% url 'school:student_list' school.organization.slug school.code %}">Élèves</a>
+          {% if request.can_manage_students %}
+            <a class="nav-link{% if 'enrollment' in request.resolver_match.url_name %} active{% endif %}"
+               href="{% url 'school:enrollment_list' school.organization.slug school.code %}">Inscriptions</a>
+          {% endif %}
+          <a class="nav-link{% if 'class' in request.resolver_match.url_name %} active{% endif %}"
+             href="{% url 'school:class_list' school.organization.slug school.code %}">Classes</a>
+          {% if request.can_manage_grades %}
+            <a class="nav-link{% if 'grading' in request.resolver_match.url_name or 'assessment' in request.resolver_match.url_name or 'report_card' in request.resolver_match.url_name %} active{% endif %}"
+               href="{% url 'school:grading_home' school.organization.slug school.code %}">Notes et bulletins</a>
+          {% endif %}
+          {% if request.can_manage_users %}
+            <a class="nav-link{% if 'user' in request.resolver_match.url_name or 'membership' in request.resolver_match.url_name or 'teacher' in request.resolver_match.url_name %} active{% endif %}"
+               href="{% url 'school:user_list' school.organization.slug school.code %}">Utilisateurs</a>
+          {% endif %}
+          {% if request.can_import %}
+            <a class="nav-link{% if request.resolver_match.url_name == 'excel_import' %} active{% endif %}"
+               href="{% url 'school:excel_import' school.organization.slug school.code %}">Import Excel</a>
+          {% endif %}
+        </nav>
+      {% endif %}
+
+      {% if request.user.is_authenticated %}
+        <div class="user-menu">
+          <span class="user-name">{{ request.user.get_username }}</span>
+          <form method="post" action="{% url 'school:logout' %}">
+            {% csrf_token %}
+            <button class="btn btn-ghost btn-sm" type="submit">Déconnexion</button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="container page">
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="container footer">
+    <span>Gestion scolaire — Mali</span>
+    {% if school %}<span>{{ school.name }} · {{ school.code }}</span>{% endif %}
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Tuteurs — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Tuteurs</h1>
+    <p class="muted">
+      {{ total_count }} tuteur{{ total_count|pluralize }} dans l'organisation
+    </p>
+  </div>
+  <div class="actions no-print">
+    {% if request.can_manage_students %}
+      <a class="btn" href="{% url 'school:guardian_create' school.organization.slug school.code %}">Nouveau tuteur</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:student_list' school.organization.slug school.code %}">Élèves</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="q">Recherche</label>
+      <input type="search" id="q" name="q" value="{{ query }}"
+             placeholder="Nom, prénom ou téléphone">
+    </div>
+    <button class="btn" type="submit">Filtrer</button>
+    {% if query %}
+      <a class="btn btn-secondary"
+         href="{% url 'school:guardian_list' school.organization.slug school.code %}">Réinitialiser</a>
+    {% endif %}
+  </form>
+
+  {% if guardians %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Téléphone</th>
+            <th>Email</th>
+            <th class="numeric">Élèves dans l'école</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for guardian in guardians %}
+            <tr>
+              <td>
+                <a href="{% url 'school:guardian_detail' school.organization.slug school.code guardian.id %}">
+                  {{ guardian.full_name }}
+                </a>
+              </td>
+              <td>{{ guardian.phone }}</td>
+              <td>{{ guardian.email|default:"—" }}</td>
+              <td class="numeric">{{ guardian.student_count }}</td>
+              <td class="nowrap">
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:guardian_detail' school.organization.slug school.code guardian.id %}">Voir</a>
+                {% if request.can_manage_students %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:guardian_edit' school.organization.slug school.code guardian.id %}">Modifier</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      {% if query %}
+        Aucun tuteur ne correspond à cette recherche.
+      {% else %}
+        Aucun tuteur enregistré.
+        {% if request.can_manage_students %}
+          <a href="{% url 'school:guardian_create' school.organization.slug school.code %}">Créer le premier tuteur</a>.
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

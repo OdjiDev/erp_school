@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ school.name }}</h1>
+    <p class="muted">
+      {{ school.code }}
+      {% if current_year %} · Année scolaire {{ current_year.name }}{% endif %}
+    </p>
+  </div>
+  <a class="btn" href="{% url 'school:student_list' school.organization.slug school.code %}">
+    Voir les élèves
+  </a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <span class="stat-label">Élèves actifs</span>
+    <span class="stat-value">{{ student_count }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Classes</span>
+    <span class="stat-value">{{ class_count }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Inscriptions actives</span>
+    <span class="stat-value">{{ enrollment_count }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Tuteurs</span>
+    <span class="stat-value">{{ guardian_count }}</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head">
+      <h2>Capacité d'accueil</h2>
+      {% if current_year %}<span class="muted">{{ current_year.name }}</span>{% endif %}
+    </div>
+
+    {% if current_year and capacity %}
+      <div class="progress" aria-label="Taux d'occupation">
+        <div class="progress-bar" style="width: {{ occupancy_rate }}%;"></div>
+      </div>
+      <p class="muted">
+        {{ enrollment_count }} inscription{{ enrollment_count|pluralize }} active{{ enrollment_count|pluralize }}
+        sur {{ capacity }} place{{ capacity|pluralize }} — {{ occupancy_rate }} %
+      </p>
+    {% elif current_year %}
+      <p class="muted">Aucune capacité définie pour cette année scolaire.</p>
+    {% else %}
+      <div class="callout">
+        Aucune année scolaire n'est configurée pour cet établissement.
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Accès rapides</h2>
+    </div>
+    <ul class="quick-links">
+      {% if request.can_manage_structure %}
+        <li>
+          <a href="{% url 'school:structure' school.organization.slug school.code %}">
+            Gérer la structure académique
+          </a>
+        </li>
+      {% endif %}
+      <li>
+        <a href="{% url 'school:student_list' school.organization.slug school.code %}">
+          Rechercher un élève
+        </a>
+      </li>
+      {% if request.can_manage_students %}
+        <li>
+          <a href="{% url 'school:enrollment_list' school.organization.slug school.code %}">
+            Gérer les inscriptions
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'school:guardian_list' school.organization.slug school.code %}">
+            Consulter les tuteurs
+          </a>
+        </li>
+      {% endif %}
+      {% if request.can_manage_structure %}
+        <li>
+          <a href="{% url 'school:subject_list' school.organization.slug school.code %}">
+            Gérer les matières
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'school:curriculum_list' school.organization.slug school.code %}">
+            Définir les coefficients
+          </a>
+        </li>
+      {% endif %}
+      {% if request.can_manage_grades %}
+        <li><a href="{% url 'school:grading_home' school.organization.slug school.code %}">Gérer les évaluations et bulletins</a></li>
+      {% endif %}
+      <li>
+        <a href="{% url 'school:class_list' school.organization.slug school.code %}">
+          Consulter les classes
+        </a>
+      </li>
+      {% if request.can_manage_users %}
+        <li>
+          <a href="{% url 'school:user_list' school.organization.slug school.code %}">
+            Gérer les utilisateurs
+          </a>
+        </li>
+      {% endif %}
+      {% if request.can_import %}
+        <li>
+          <a href="{% url 'school:excel_import' school.organization.slug school.code %}">
+            Importer un fichier Excel
+          </a>
+        </li>
+      {% endif %}
+      {% if request.user.is_superuser %}
+        <li><a href="{% url 'admin:index' %}">Administration de la plateforme</a></li>
+      {% endif %}
+    </ul>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Dernières inscriptions</h2>
+    {% if current_year %}<span class="muted">{{ current_year.name }}</span>{% endif %}
+  </div>
+
+  {% if recent_enrollments %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Élève</th>
+            <th>Classe</th>
+            <th>Statut</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enrollment in recent_enrollments %}
+            <tr>
+              <td>
+                <a href="{% url 'school:student_detail' school.organization.slug school.code enrollment.student.id %}">
+                  {{ enrollment.student.full_name }}
+                </a>
+                <div class="muted">{{ enrollment.student.matricule }}</div>
+              </td>
+              <td>{{ enrollment.school_class.display_name }}</td>
+              <td>
+                <span class="badge badge-{{ enrollment.status }}">{{ enrollment.get_status_display }}</span>
+              </td>
+              <td>{{ enrollment.enrolled_on|date:"d/m/Y" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucune inscription enregistrée pour cette année.</div>
+  {% endif %}
+</section>
+{% endblock %}

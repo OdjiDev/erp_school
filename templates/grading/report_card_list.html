@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Bulletins — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div><h1>Bulletins</h1><p class="muted">Les moyennes utilisent les évaluations publiées et les coefficients du programme.</p></div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'school:grading_home' school.organization.slug school.code %}">Notes et périodes</a>
+    {% if request.can_manage_structure %}
+      {% if selected_class %}
+        <a class="btn btn-secondary" href="{% url 'school:curriculum_list' school.organization.slug school.code %}?annee={{ selected_class.academic_year.id }}&niveau={{ selected_class.level.id }}&serie={{ selected_class.series.id }}">Configurer les coefficients</a>
+      {% else %}
+        <a class="btn btn-secondary" href="{% url 'school:curriculum_list' school.organization.slug school.code %}">Configurer les coefficients</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<section class="card">
+  <form method="get" class="filter-form">
+    <div class="field"><label for="id_periode">Période</label>
+      <select id="id_periode" name="periode" required><option value="">Choisir une période</option>
+        {% for period in periods %}<option value="{{ period.id }}"{% if selected_period.id == period.id %} selected{% endif %}>{{ period.academic_year.name }} — {{ period.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label for="id_classe">Classe</label>
+      <select id="id_classe" name="classe" required><option value="">Choisir une classe</option>
+        {% for school_class in classes %}<option value="{{ school_class.id }}"{% if selected_class.id == school_class.id %} selected{% endif %}>{{ school_class.academic_year.name }} — {{ school_class.display_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Afficher les bulletins</button>
+  </form>
+</section>
+
+{% if selected_period and selected_class %}
+  <section class="card">
+    <div class="card-head"><h2>{{ selected_class.display_name }} — {{ selected_period.name }}</h2><span class="muted">{{ bulletins|length }} élève(s)</span></div>
+    {% if selected_period.is_closed %}<div class="callout">Période clôturée : les bulletins affichés sont figés. Toute correction nécessite une réouverture motivée.</div>{% endif %}
+    {% if bulletins %}
+      <div class="table-wrap"><table>
+        <thead><tr><th>Rang</th><th>Matricule</th><th>Élève</th><th>Moyenne générale / 20</th><th>Matières notées</th><th>Décision du conseil</th><th>Bulletin</th></tr></thead>
+        <tbody>{% for bulletin in bulletins %}
+          <tr>
+            <td>{{ bulletin.rank|default:"—" }}</td>
+            <td>{{ bulletin.student.matricule }}</td>
+            <td>{{ bulletin.student.last_name }} {{ bulletin.student.first_name }}</td>
+            <td>{{ bulletin.general_average|default_if_none:"—" }}</td>
+            <td>{{ bulletin.subjects_with_average }} / {{ bulletin.subjects_count }}</td>
+            <td>
+              {% if bulletin.deliberation_label %}{{ bulletin.deliberation_label }}{% else %}<span class="muted">Non délibéré</span>{% endif %}
+              {% if request.can_manage_structure and not selected_period.is_closed %}<div><a href="{% url 'school:deliberation_edit' school.organization.slug school.code bulletin.enrollment.id selected_period.id %}">{% if bulletin.deliberation_label %}Modifier la décision{% else %}Saisir la décision{% endif %}</a></div>{% endif %}
+            </td>
+            <td>
+              <a class="btn btn-secondary btn-sm" href="{% url 'school:report_card_print' school.organization.slug school.code bulletin.enrollment.id selected_period.id %}">Ouvrir / imprimer</a>
+              {% if bulletin.snapshot_versions %}<div class="muted">Versions : {% for version in bulletin.snapshot_versions %}<a href="{% url 'school:report_card_print' school.organization.slug school.code bulletin.enrollment.id selected_period.id %}?version={{ version }}">v{{ version }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}</tbody>
+      </table></div>
+    {% else %}
+      <div class="empty">Aucun élève actif inscrit dans cette classe.</div>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

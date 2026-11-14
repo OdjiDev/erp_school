@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ guardian.full_name }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'school:guardian_list' school.organization.slug school.code %}">← Retour aux tuteurs</a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>{{ guardian.full_name }}</h1>
+    <p class="muted">{{ guardian.occupation|default:"Tuteur" }}</p>
+  </div>
+  <div class="actions no-print">
+    {% if request.can_manage_students %}
+      <a class="btn" href="{% url 'school:guardian_edit' school.organization.slug school.code guardian.id %}">Modifier</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:student_list' school.organization.slug school.code %}">Élèves</a>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Contact</h2>
+  </div>
+  <dl class="detail-grid">
+    <div>
+      <dt>Téléphone principal</dt>
+      <dd>{{ guardian.phone }}</dd>
+    </div>
+    <div>
+      <dt>Téléphone secondaire</dt>
+      <dd>{{ guardian.secondary_phone|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Email</dt>
+      <dd>{{ guardian.email|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Profession</dt>
+      <dd>{{ guardian.occupation|default:"—" }}</dd>
+    </div>
+    <div class="detail-wide">
+      <dt>Adresse</dt>
+      <dd>{{ guardian.address|default:"—" }}</dd>
+    </div>
+    {% if guardian.notes %}
+      <div class="detail-wide">
+        <dt>Notes</dt>
+        <dd>{{ guardian.notes|linebreaksbr }}</dd>
+      </div>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Élèves de cette école</h2>
+    <span class="muted">{{ links|length }} élève{{ links|length|pluralize }}</span>
+  </div>
+
+  {% if links %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Élève</th>
+            <th>Lien</th>
+            <th>Principal</th>
+            <th>Payeur</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for link in links %}
+            <tr>
+              <td>{{ link.student.matricule }}</td>
+              <td>
+                <a href="{% url 'school:student_detail' school.organization.slug school.code link.student.id %}">
+                  {{ link.student.full_name }}
+                </a>
+              </td>
+              <td>{{ link.get_relationship_display }}</td>
+              <td>{% if link.is_primary %}Oui{% else %}—{% endif %}</td>
+              <td>{% if link.is_financial_responsible %}Oui{% else %}—{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Ce tuteur n'est lié à aucun élève de cette école. Les liens se gèrent
+      depuis la fiche de l'élève.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

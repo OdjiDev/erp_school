@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Élèves — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Élèves</h1>
+    <p class="muted">
+      {{ total_count }} élève{{ total_count|pluralize }}
+      {% if current_year %} · année {{ current_year.name }}{% endif %}
+    </p>
+  </div>
+  <div class="actions no-print">
+    {% if request.can_manage_students %}
+      <a class="btn" href="{% url 'school:student_create' school.organization.slug school.code %}">Nouvel élève</a>
+      <a class="btn btn-secondary" href="{% url 'school:enrollment_create' school.organization.slug school.code %}">Inscrire</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:guardian_list' school.organization.slug school.code %}">Tuteurs</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="q">Recherche</label>
+      <input type="search" id="q" name="q" value="{{ query }}"
+             placeholder="Matricule, nom ou prénom">
+    </div>
+    <div class="field">
+      <label for="statut">Statut</label>
+      <select id="statut" name="statut">
+        <option value="">Tous les statuts</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Filtrer</button>
+    {% if query or status %}
+      <a class="btn btn-secondary"
+         href="{% url 'school:student_list' school.organization.slug school.code %}">Réinitialiser</a>
+    {% endif %}
+  </form>
+
+  {% if students %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom</th>
+            <th>Prénoms</th>
+            <th>Sexe</th>
+            <th>Naissance</th>
+            <th>Classe</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+            <tr>
+              <td>
+                <a href="{% url 'school:student_detail' school.organization.slug school.code student.id %}">
+                  {{ student.matricule }}
+                </a>
+              </td>
+              <td>{{ student.last_name }}</td>
+              <td>{{ student.first_name }}</td>
+              <td>{{ student.get_gender_display|default:"—" }}</td>
+              <td>{{ student.date_of_birth|date:"d/m/Y"|default:"—" }}</td>
+              <td>{{ student.current_enrollment.school_class.display_name|default:"Non inscrit" }}</td>
+              <td>
+                <span class="badge badge-{{ student.status }}">{{ student.get_status_display }}</span>
+              </td>
+              <td class="nowrap">
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:student_detail' school.organization.slug school.code student.id %}">Voir</a>
+                {% if request.can_manage_students %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:student_edit' school.organization.slug school.code student.id %}">Modifier</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      {% if query or status %}
+        Aucun élève ne correspond à ces critères.
+      {% else %}
+        Aucun élève enregistré dans cet établissement.
+        {% if request.can_manage_students %}
+          <a href="{% url 'school:student_create' school.organization.slug school.code %}">Créer le premier élève</a>.
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

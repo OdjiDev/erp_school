@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter un tuteur — {{ student.full_name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'school:student_detail' school.organization.slug school.code student.id %}">
+    ← Retour à {{ student.full_name }}
+  </a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>Ajouter un tuteur</h1>
+    <p class="muted">{{ student.full_name }} · {{ student.matricule }}</p>
+  </div>
+</div>
+
+{% if existing_guardians %}
+  <section class="card structure-form">
+    <div class="card-head">
+      <h2>Lier un tuteur existant</h2>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="existing">
+      {% include "partials/form_fields.html" with form=link_form %}
+      <div class="form-actions">
+        <button class="btn" type="submit">Lier ce tuteur</button>
+        <a class="btn btn-secondary"
+           href="{% url 'school:student_detail' school.organization.slug school.code student.id %}">Annuler</a>
+      </div>
+    </form>
+  </section>
+{% endif %}
+
+<section class="card structure-form">
+  <div class="card-head">
+    <h2>Créer un nouveau tuteur</h2>
+  </div>
+  <p class="muted">
+    Le tuteur sera enregistré dans l'organisation et pourra être partagé avec
+    les autres écoles.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="new">
+    {% include "partials/form_fields.html" with form=new_form %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Créer et lier le tuteur</button>
+      <a class="btn btn-secondary"
+         href="{% url 'school:student_detail' school.organization.slug school.code student.id %}">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

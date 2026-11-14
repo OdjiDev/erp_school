@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Délibération — {{ enrollment.student.full_name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'school:report_card_list' school.organization.slug school.code %}?periode={{ period.id }}&classe={{ enrollment.school_class.id }}">← Retour aux bulletins</a>
+</div>
+<div class="page-head">
+  <div>
+    <h1>Décision du conseil</h1>
+    <p class="muted">{{ enrollment.student.full_name }} · {{ enrollment.school_class.display_name }} · {{ period.name }}</p>
+  </div>
+</div>
+<div class="callout">Cette décision est saisie par le conseil ou un responsable. Le système ne déduit pas automatiquement la réussite à partir d'un seuil de moyenne.</div>
+<section class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Enregistrer la décision</button>
+      <a class="btn btn-secondary" href="{% url 'school:report_card_list' school.organization.slug school.code %}?periode={{ period.id }}&classe={{ enrollment.school_class.id }}">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

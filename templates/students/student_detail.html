@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.full_name }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'school:student_list' school.organization.slug school.code %}">← Retour aux élèves</a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>{{ student.full_name }}</h1>
+    <p class="muted">
+      {{ student.matricule }} ·
+      <span class="badge badge-{{ student.status }}">{{ student.get_status_display }}</span>
+    </p>
+  </div>
+  <div class="actions no-print">
+    {% if request.can_manage_students %}
+      <a class="btn" href="{% url 'school:student_edit' school.organization.slug school.code student.id %}">Modifier</a>
+      <a class="btn btn-secondary" href="{% url 'school:student_guardian_create' school.organization.slug school.code student.id %}">Ajouter un tuteur</a>
+      {% if current_year and not current_enrollment %}
+        <a class="btn btn-secondary" href="{% url 'school:enrollment_create' school.organization.slug school.code %}?eleve={{ student.id }}">Inscrire pour {{ current_year.name }}</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if current_year and not current_enrollment %}
+  <div class="callout no-print">
+    Cet élève n'est pas inscrit pour l'année {{ current_year.name }}.
+  </div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <h2>Identité</h2>
+  </div>
+  <dl class="detail-grid">
+    <div>
+      <dt>Nom</dt>
+      <dd>{{ student.last_name }}</dd>
+    </div>
+    <div>
+      <dt>Prénoms</dt>
+      <dd>{{ student.first_name }}</dd>
+    </div>
+    <div>
+      <dt>Sexe</dt>
+      <dd>{{ student.get_gender_display|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Date de naissance</dt>
+      <dd>{{ student.date_of_birth|date:"d/m/Y"|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Lieu de naissance</dt>
+      <dd>{{ student.place_of_birth|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Téléphone</dt>
+      <dd>{{ student.phone|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Email</dt>
+      <dd>{{ student.email|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>Adresse</dt>
+      <dd>{{ student.address|default:"—" }}</dd>
+    </div>
+    {% if student.notes %}
+      <div class="detail-wide">
+        <dt>Notes</dt>
+        <dd>{{ student.notes|linebreaksbr }}</dd>
+      </div>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Tuteurs</h2>
+    <span class="muted">{{ guardianships|length }} contact{{ guardianships|length|pluralize }}</span>
+  </div>
+
+  {% if guardianships %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Lien</th>
+            <th>Téléphone</th>
+            <th>Responsable</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for link in guardianships %}
+            <tr>
+              <td>
+                <a href="{% url 'school:guardian_detail' school.organization.slug school.code link.guardian.id %}">
+                  {{ link.guardian.full_name }}
+                </a>
+                {% if link.is_primary %}<span class="badge badge-active">Principal</span>{% endif %}
+              </td>
+              <td>{{ link.get_relationship_display }}</td>
+              <td>{{ link.guardian.phone }}</td>
+              <td>
+                {% if link.is_financial_responsible %}
+                  <span class="badge badge-completed">Payeur</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                {% if request.can_manage_students %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:student_guardian_edit' school.organization.slug school.code student.id link.id %}">Modifier</a>
+                  <form method="post" class="inline-form"
+                        action="{% url 'school:student_guardian_delete' school.organization.slug school.code student.id link.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-ghost btn-sm" type="submit"
+                            onclick="return confirm('Retirer ce lien ? Le tuteur sera conservé.');">Retirer</button>
+                  </form>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Aucun tuteur enregistré.
+      {% if request.can_manage_students %}
+        <a href="{% url 'school:student_guardian_create' school.organization.slug school.code student.id %}">Ajouter un tuteur</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Scolarité</h2>
+    {% if request.can_manage_students %}
+      <a class="btn btn-secondary btn-sm" href="{% url 'school:enrollment_create' school.organization.slug school.code %}?eleve={{ student.id }}">Nouvelle inscription</a>
+    {% endif %}
+  </div>
+
+  {% if enrollments %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Année</th>
+            <th>Classe</th>
+            <th>Statut</th>
+            <th>Inscription</th>
+            <th>Sortie</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enrollment in enrollments %}
+            <tr>
+              <td>{{ enrollment.academic_year.name }}</td>
+              <td>{{ enrollment.school_class.display_name }}</td>
+              <td>
+                <span class="badge badge-{{ enrollment.status }}">{{ enrollment.get_status_display }}</span>
+              </td>
+              <td>{{ enrollment.enrolled_on|date:"d/m/Y" }}</td>
+              <td>{{ enrollment.exited_on|date:"d/m/Y"|default:"—" }}</td>
+              <td>
+                {% if request.can_manage_students %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:enrollment_edit' school.organization.slug school.code enrollment.id %}">Modifier</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucune inscription enregistrée.</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "generic_form.html" %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+  (function () {
+    const levelSelect = document.getElementById("id_level");
+    const seriesSelect = document.getElementById("id_series");
+    if (!levelSelect || !seriesSelect) return;
+
+    const options = Array.from(seriesSelect.options);
+
+    function filterSeries() {
+      const levelOption = levelSelect.options[levelSelect.selectedIndex];
+      const levelLabel = levelOption ? levelOption.textContent.trim() : "";
+      let selectedVisible = false;
+
+      options.forEach(function (option) {
+        if (!option.value) return;
+        const matches = !levelLabel || option.textContent.indexOf(levelLabel + " —") === 0;
+        option.hidden = !matches;
+        option.disabled = !matches;
+        if (option.selected && matches) selectedVisible = true;
+      });
+
+      if (!selectedVisible) {
+        const firstVisible = options.find(function (option) {
+          return option.value && !option.disabled;
+        });
+        seriesSelect.value = firstVisible ? firstVisible.value : "";
+      }
+    }
+
+    levelSelect.addEventListener("change", filterSeries);
+    filterSeries();
+  })();
+</script>
+{% endblock %}

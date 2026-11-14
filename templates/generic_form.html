@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ form_title }}</h1>
+    <p class="muted">{{ form_intro }}</p>
+  </div>
+  <a class="btn btn-secondary" href="{{ cancel_url }}">Retour</a>
+</div>
+
+<div class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+
+    <div class="form-actions">
+      <button class="btn" type="submit">
+        {{ submit_label|default:"Enregistrer" }}
+      </button>
+      <a class="btn btn-secondary" href="{{ cancel_url }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% block after_form %}{% endblock %}
+{% endblock %}

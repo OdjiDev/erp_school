@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}{{ organization.name }} — Gestion scolaire{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ organization.name }}</h1>
+    <p class="muted">Sélectionnez un établissement.</p>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'school:home' %}">Toutes les organisations</a>
+</div>
+
+<section class="card">
+  <div class="school-grid">
+    {% for school in schools %}
+      <a class="school-card"
+         href="{% url 'school:dashboard' school.organization.slug school.code %}">
+        <span class="school-name">{{ school.name }}</span>
+        <span class="school-code">{{ school.code }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

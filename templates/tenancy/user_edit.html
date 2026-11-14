@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ target_user.get_username }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb no-print">
+  <a href="{% url 'school:user_list' school.organization.slug school.code %}">← Retour aux utilisateurs</a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>{{ target_user.get_full_name|default:target_user.get_username }}</h1>
+    <p class="muted">
+      {{ target_user.get_username }}
+      {% if target_user.email %} · {{ target_user.email }}{% endif %}
+    </p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn btn-secondary" href="{% url 'school:user_password_reset' school.organization.slug school.code target_user.id %}">Réinitialiser le mot de passe</a>
+    <a class="btn btn-secondary" href="{% url 'school:teacher_list' school.organization.slug school.code %}">Enseignants</a>
+  </div>
+</div>
+
+{% if is_self %}
+  <div class="callout">
+    Vous modifiez votre propre compte.
+  </div>
+{% endif %}
+
+<section class="card structure-form">
+  <div class="card-head">
+    <h2>Compte</h2>
+    <span class="badge {% if target_user.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+      {% if target_user.is_active %}Actif{% else %}Inactif{% endif %}
+    </span>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Enregistrer</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Rôles</h2>
+    <a class="btn btn-secondary btn-sm no-print"
+       href="{% url 'school:membership_create' school.organization.slug school.code target_user.id %}">Ajouter un rôle</a>
+  </div>
+
+  {% if memberships %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rôle</th>
+            <th>Portée</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for membership in memberships %}
+            <tr>
+              <td>{{ membership.get_role_display }}</td>
+              <td>
+                {% if membership.school %}
+                  {{ membership.school.name }} ({{ membership.school.code }})
+                {% else %}
+                  Toute l'organisation
+                {% endif %}
+              </td>
+              <td>
+                {% if membership.is_active %}
+                  <span class="badge badge-active">Actif</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactif</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                {% if membership.can_edit %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:membership_edit' school.organization.slug school.code membership.id %}">Modifier</a>
+                {% endif %}
+                {% if membership.can_toggle %}
+                  <form method="post" class="inline-form"
+                        action="{% url 'school:membership_toggle' school.organization.slug school.code membership.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-ghost btn-sm" type="submit">
+                      {% if membership.is_active %}Désactiver{% else %}Activer{% endif %}
+                    </button>
+                  </form>
+                {% endif %}
+                {% if not membership.can_edit %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucun rôle dans cette école ou cette organisation.</div>
+  {% endif %}
+</section>
+{% endblock %}

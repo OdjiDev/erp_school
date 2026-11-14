@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ school_class.display_name }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb no-print">
+  <a href="{% url 'school:class_list' school.organization.slug school.code %}?annee={{ school_class.academic_year.id }}">← Retour aux classes</a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>{{ school_class.display_name }}</h1>
+    <p class="muted">
+      {{ school_class.academic_year.name }} ·
+      {{ school_class.level.name }} · {{ school_class.series.name }}
+      {% if school_class.site %} · {{ school_class.site.name }}{% endif %}
+    </p>
+  </div>
+  <div class="actions no-print">
+    {% if request.can_manage_structure %}
+      <a class="btn" href="{% url 'school:class_edit' school.organization.slug school.code school_class.id %}">Modifier</a>
+      <a class="btn btn-secondary" href="{% url 'school:class_assignments' school.organization.slug school.code school_class.id %}">Affectations</a>
+    {% endif %}
+    {% if request.can_manage_grades %}
+      <a class="btn btn-secondary" href="{% url 'school:assessment_list' school.organization.slug school.code %}?classe={{ school_class.id }}">Évaluations</a>
+      <a class="btn btn-secondary" href="{% url 'school:report_card_list' school.organization.slug school.code %}?classe={{ school_class.id }}">Bulletins</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:class_export' school.organization.slug school.code school_class.id %}">Exporter Excel</a>
+    <button class="btn btn-secondary" type="button" onclick="window.print()">Imprimer</button>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <span class="stat-label">Élèves actifs</span>
+    <span class="stat-value">{{ active_count }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Capacité</span>
+    <span class="stat-value">{{ school_class.capacity }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Remplissage</span>
+    {% widthratio active_count school_class.capacity 100 as fill_rate %}
+    <span class="stat-value">{{ fill_rate }} %</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Matières</span>
+    <span class="stat-value">{{ class_subjects|length }}</span>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Liste de classe</h2>
+    {% if request.can_manage_students %}
+      <a class="btn btn-secondary btn-sm no-print" href="{% url 'school:enrollment_create' school.organization.slug school.code %}">Inscrire un élève</a>
+    {% endif %}
+  </div>
+
+  {% if enrollments %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Matricule</th>
+            <th>Nom</th>
+            <th>Prénoms</th>
+            <th>Sexe</th>
+            <th>Naissance</th>
+            <th>Tuteur principal</th>
+            <th>Téléphone</th>
+            <th>Statut</th>
+            <th class="no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enrollment in enrollments %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ enrollment.student.matricule }}</td>
+              <td>{{ enrollment.student.last_name }}</td>
+              <td>{{ enrollment.student.first_name }}</td>
+              <td>{{ enrollment.student.get_gender_display|default:"—" }}</td>
+              <td>{{ enrollment.student.date_of_birth|date:"d/m/Y"|default:"—" }}</td>
+              <td>{{ enrollment.primary_guardian.full_name|default:"—" }}</td>
+              <td>{{ enrollment.primary_guardian.phone|default:"—" }}</td>
+              <td>
+                <span class="badge badge-{{ enrollment.status }}">{{ enrollment.get_status_display }}</span>
+              </td>
+              <td class="nowrap no-print">
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:student_detail' school.organization.slug school.code enrollment.student.id %}">Fiche</a>
+                {% if request.can_manage_students %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:enrollment_edit' school.organization.slug school.code enrollment.id %}">Inscription</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Aucun élève inscrit dans cette classe.
+      {% if request.can_manage_students %}
+        <a href="{% url 'school:enrollment_create' school.organization.slug school.code %}">Inscrire un élève</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Matières et enseignants</h2>
+    {% if request.can_manage_structure %}
+      <a class="btn btn-secondary btn-sm no-print"
+         href="{% url 'school:class_assignments' school.organization.slug school.code school_class.id %}">Gérer les affectations</a>
+    {% endif %}
+  </div>
+
+  {% if class_subjects %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Matière</th>
+            <th>Enseignant</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in class_subjects %}
+            <tr>
+              <td>{{ assignment.subject.code }}</td>
+              <td>{{ assignment.subject.name }}</td>
+              <td>
+                {% if assignment.teacher %}
+                  {{ assignment.teacher.get_full_name|default:assignment.teacher.get_username }}
+                {% else %}
+                  Non affecté
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Aucune matière rattachée à cette classe. Ajoutez-les depuis les
+      affectations ou créez le programme de coefficients.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

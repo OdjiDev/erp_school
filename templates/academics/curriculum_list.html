@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Coefficients — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Coefficients</h1>
+    <p class="muted">
+      Programme et coefficients par année, niveau et série
+    </p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn btn-secondary" href="{% url 'school:subject_list' school.organization.slug school.code %}">Matières</a>
+    <a class="btn btn-secondary" href="{% url 'school:structure' school.organization.slug school.code %}">Structure</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="annee">Année scolaire</label>
+      <select id="annee" name="annee">
+        {% for year in years %}
+          <option value="{{ year.id }}"{% if selected_year and year.id == selected_year.id %} selected{% endif %}>
+            {{ year.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="niveau">Niveau</label>
+      <select id="niveau" name="niveau">
+        {% for level in levels %}
+          <option value="{{ level.id }}"{% if selected_level and level.id == selected_level.id %} selected{% endif %}>
+            {{ level.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="serie">Série</label>
+      <select id="serie" name="serie">
+        {% for series in series_list %}
+          <option value="{{ series.id }}"{% if selected_series and series.id == selected_series.id %} selected{% endif %}>
+            {{ series.name }} ({{ series.code }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Afficher</button>
+  </form>
+
+  {% if not selected_year or not selected_level or not selected_series %}
+    <div class="empty">
+      Créez d'abord une année, un niveau et une série dans la structure
+      académique.
+    </div>
+  {% elif not curriculum %}
+    <div class="callout">
+      Le programme {{ selected_level.name }} {{ selected_series.name }} pour
+      {{ selected_year.name }} n'existe pas encore.
+    </div>
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <button class="btn" type="submit">Créer le programme</button>
+    </form>
+  {% else %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Matière</th>
+            <th class="numeric">Coefficient</th>
+            <th class="numeric">Heures / semaine</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+            <tr>
+              <td>{{ item.subject.code }}</td>
+              <td>{{ item.subject.name }}</td>
+              <td class="numeric">{{ item.coefficient }}</td>
+              <td class="numeric">{{ item.weekly_hours|default:"—" }}</td>
+              <td>
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:curriculum_subject_edit' school.organization.slug school.code item.id %}">Modifier</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="muted">
+                Aucune matière dans ce programme.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-head section-head">
+      <h2>Ajouter une matière</h2>
+    </div>
+
+    {% if not has_subjects %}
+      <div class="empty">
+        Aucune matière dans l'école.
+        <a href="{% url 'school:subject_create' school.organization.slug school.code %}">Créer une matière</a>.
+      </div>
+    {% elif not available_subjects %}
+      <div class="empty">
+        Toutes les matières de l'école figurent déjà dans ce programme.
+      </div>
+    {% else %}
+      <form method="post" class="structure-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        {% include "partials/form_fields.html" with form=form %}
+        <div class="form-actions">
+          <button class="btn" type="submit">Ajouter au programme</button>
+        </div>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Évaluations — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div><h1>Évaluations</h1><p class="muted">Saisissez les notes, puis publiez-les pour les intégrer aux bulletins.</p></div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'school:grading_home' school.organization.slug school.code %}">Périodes</a>
+    <a class="btn" href="{% url 'school:assessment_create' school.organization.slug school.code %}{% if selected_period %}?periode={{ selected_period.id }}{% endif %}">Nouvelle évaluation</a>
+  </div>
+</div>
+
+<section class="card">
+  <form method="get" class="filter-form">
+    <div class="field"><label for="id_periode">Période</label>
+      <select id="id_periode" name="periode"><option value="">Toutes</option>
+        {% for period in periods %}<option value="{{ period.id }}"{% if selected_period.id == period.id %} selected{% endif %}>{{ period.academic_year.name }} — {{ period.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label for="id_classe">Classe</label>
+      <select id="id_classe" name="classe"><option value="">Toutes</option>
+        {% for school_class in classes %}<option value="{{ school_class.id }}"{% if selected_class.id == school_class.id %} selected{% endif %}>{{ school_class.academic_year.name }} — {{ school_class.display_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">Filtrer</button>
+  </form>
+</section>
+
+<section class="card">
+  {% if assessments %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Évaluation</th><th>Période</th><th>Classe</th><th>Matière</th><th>Date</th><th>Barème</th><th>État</th><th>Action</th></tr></thead>
+      <tbody>{% for assessment in assessments %}
+        <tr>
+          <td>{{ assessment.title }}<div class="muted">{{ assessment.get_assessment_type_display }} · poids {{ assessment.weight }}</div></td>
+          <td>{{ assessment.period.name }}</td>
+          <td>{{ assessment.school_class.display_name }}</td>
+          <td>{{ assessment.class_subject.subject.name }}</td>
+          <td>{{ assessment.held_on|date:"d/m/Y"|default:"—" }}</td>
+          <td>{{ assessment.max_score }}</td>
+          <td>{% if assessment.is_published %}<span class="badge badge-active">Publiée</span>{% else %}<span class="badge badge-warning">Brouillon</span>{% endif %}</td>
+          <td><a class="btn btn-secondary btn-sm" href="{% url 'school:gradebook' school.organization.slug school.code assessment.id %}">{% if assessment.is_published %}Voir la saisie{% else %}Saisir les notes{% endif %}</a></td>
+        </tr>
+      {% endfor %}</tbody>
+    </table></div>
+  {% else %}
+    <div class="empty">Aucune évaluation pour ces filtres. Créez une évaluation pour commencer la saisie.</div>
+  {% endif %}
+</section>
+{% endblock %}

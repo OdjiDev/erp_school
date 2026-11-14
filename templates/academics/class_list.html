@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Classes — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Classes</h1>
+    <p class="muted">
+      {% if selected_year %}Année scolaire {{ selected_year.name }}{% else %}Aucune année sélectionnée{% endif %}
+    </p>
+  </div>
+  <div class="actions no-print">
+    {% if request.can_manage_structure %}
+      <a class="btn" href="{% url 'school:class_create' school.organization.slug school.code %}">Nouvelle classe</a>
+      <a class="btn btn-secondary" href="{% url 'school:structure' school.organization.slug school.code %}">Structure</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="annee">Année scolaire</label>
+      <select id="annee" name="annee">
+        {% for year in years %}
+          <option value="{{ year.id }}"{% if selected_year and year.id == selected_year.id %} selected{% endif %}>
+            {{ year.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Afficher</button>
+  </form>
+
+  {% if classes %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Classe</th>
+            <th>Niveau</th>
+            <th>Série</th>
+            <th>Site</th>
+            <th class="numeric">Effectif</th>
+            <th class="numeric">Capacité</th>
+            <th class="numeric">Remplissage</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for school_class in classes %}
+            {% widthratio school_class.active_count school_class.capacity 100 as fill_rate %}
+            <tr>
+              <td>
+                <a href="{% url 'school:class_detail' school.organization.slug school.code school_class.id %}">
+                  {{ school_class.display_name }}
+                </a>
+              </td>
+              <td>{{ school_class.level.name }}</td>
+              <td>{{ school_class.series.name }}</td>
+              <td>{{ school_class.site.name|default:"—" }}</td>
+              <td class="numeric">{{ school_class.active_count }}</td>
+              <td class="numeric">{{ school_class.capacity }}</td>
+              <td class="numeric">
+                <span class="badge {% if school_class.is_full %}badge-warning{% else %}badge-active{% endif %}">
+                  {{ fill_rate }} %
+                </span>
+              </td>
+              <td class="nowrap">
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:class_detail' school.organization.slug school.code school_class.id %}">Voir</a>
+                {% if request.can_manage_structure %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:class_edit' school.organization.slug school.code school_class.id %}">Modifier</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      {% if selected_year %}
+        Aucune classe pour cette année scolaire.
+        {% if request.can_manage_structure %}
+          <a href="{% url 'school:class_create' school.organization.slug school.code %}">Créer une classe</a>.
+        {% endif %}
+      {% else %}
+        Aucune année scolaire configurée pour cet établissement.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

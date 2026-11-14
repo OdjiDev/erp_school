@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Utilisateurs — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Utilisateurs et rôles</h1>
+    <p class="muted">
+      {{ total_count }} rôle{{ total_count|pluralize }} affiché{{ total_count|pluralize }}
+    </p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn" href="{% url 'school:user_create' school.organization.slug school.code %}">Nouvel utilisateur</a>
+    <a class="btn btn-secondary" href="{% url 'school:teacher_list' school.organization.slug school.code %}">Enseignants</a>
+  </div>
+</div>
+
+{% if not can_manage_organization %}
+  <div class="callout">
+    Vous gérez les comptes de cette école. Les rôles au niveau de
+    l'organisation sont affichés en lecture seule.
+  </div>
+{% endif %}
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="q">Recherche</label>
+      <input type="search" id="q" name="q" value="{{ query }}"
+             placeholder="Identifiant, nom ou email">
+    </div>
+    <button class="btn" type="submit">Filtrer</button>
+    {% if query %}
+      <a class="btn btn-secondary"
+         href="{% url 'school:user_list' school.organization.slug school.code %}">Réinitialiser</a>
+    {% endif %}
+  </form>
+
+  {% if memberships %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Identifiant</th>
+            <th>Rôle</th>
+            <th>Portée</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for membership in memberships %}
+            <tr>
+              <td>
+                {{ membership.user.get_full_name|default:membership.user.get_username }}
+                {% if membership.user.email %}
+                  <div class="muted">{{ membership.user.email }}</div>
+                {% endif %}
+              </td>
+              <td>{{ membership.user.get_username }}</td>
+              <td>{{ membership.get_role_display }}</td>
+              <td>
+                {% if membership.school %}
+                  {{ membership.school.name }} ({{ membership.school.code }})
+                {% else %}
+                  Toute l'organisation
+                {% endif %}
+              </td>
+              <td>
+                {% if membership.is_active %}
+                  <span class="badge badge-active">Actif</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactif</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                {% if membership.can_open %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:user_edit' school.organization.slug school.code membership.user.id %}">Compte</a>
+                {% endif %}
+                {% if membership.can_edit %}
+                  <a class="btn btn-secondary btn-sm"
+                     href="{% url 'school:membership_edit' school.organization.slug school.code membership.id %}">Rôle</a>
+                {% endif %}
+                {% if membership.can_toggle %}
+                  <form method="post" class="inline-form"
+                        action="{% url 'school:membership_toggle' school.organization.slug school.code membership.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-ghost btn-sm" type="submit">
+                      {% if membership.is_active %}Désactiver{% else %}Activer{% endif %}
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      Aucun utilisateur ne correspond à cette recherche.
+      <a href="{% url 'school:user_create' school.organization.slug school.code %}">Créer un compte</a>.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

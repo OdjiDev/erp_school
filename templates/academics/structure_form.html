@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ form_title }}</h1>
+    <p class="muted">{{ form_intro }}</p>
+  </div>
+  <a class="btn btn-secondary"
+     href="{% url cancel_url school.organization.slug school.code %}">
+    Retour à la structure
+  </a>
+</div>
+
+<div class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% for field in form %}
+      {% if field.field.widget.input_type == "checkbox" %}
+        <div class="checkbox-row">
+          {{ field }}
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        </div>
+        {{ field.errors }}
+      {% else %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <span class="muted">{{ field.help_text }}</span>
+          {% endif %}
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <div class="form-actions">
+      <button class="btn" type="submit">Enregistrer</button>
+      <a class="btn btn-secondary"
+         href="{% url cancel_url school.organization.slug school.code %}">
+        Annuler
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

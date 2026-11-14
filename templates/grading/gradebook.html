@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Saisie des notes — {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{% url 'school:assessment_list' school.organization.slug school.code %}?periode={{ assessment.period.id }}">← Évaluations</a></div>
+<div class="page-head">
+  <div>
+    <h1>{{ assessment.title }}</h1>
+    <p class="muted">{{ assessment.school_class.display_name }} · {{ assessment.class_subject.subject.name }} · {{ assessment.period.name }} · barème {{ assessment.max_score }} · poids {{ assessment.weight }}</p>
+  </div>
+  {% if is_locked %}<span class="badge badge-active">Notes publiées</span>{% endif %}
+</div>
+
+{% if correction_mode %}
+  <div class="callout">Mode correction : chaque changement sera enregistré avec son ancienne valeur, sa nouvelle valeur, l'auteur et le motif saisi.</div>
+{% elif not is_locked %}
+  <div class="callout">Une note publiée est figée. Saisissez un zéro pour compter une absence comme une note nulle; les statuts « Absent » et « Dispensé » sont exclus du calcul de la moyenne.</div>
+{% else %}
+  <div class="callout">Cette évaluation a été publiée{% if assessment.published_at %} le {{ assessment.published_at|date:"d/m/Y à H:i" }}{% endif %}. Elle alimente les bulletins de la période.</div>
+  {% if can_correct %}<p><a class="btn btn-secondary" href="?corriger=1">Corriger avec motif obligatoire</a></p>{% endif %}
+{% endif %}
+
+<section class="card">
+  {% if formset.non_form_errors %}<div class="alert alert-error">{{ formset.non_form_errors }}</div>{% endif %}
+  {% if enrollments %}
+    <form method="post">
+      {% csrf_token %}{{ formset.management_form }}
+      <div class="table-wrap"><table class="gradebook-table">
+        <thead><tr><th>#</th><th>Matricule</th><th>Élève</th><th>Statut</th><th>Note / {{ assessment.max_score }}</th><th>Observation</th></tr></thead>
+        <tbody>
+          {% for form in formset.forms %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ form.enrollment.student.matricule }}{{ form.enrollment_id }}</td>
+              <td>{{ form.enrollment.student.last_name }} {{ form.enrollment.student.first_name }}</td>
+              <td>{{ form.status }}{{ form.status.errors }}</td>
+              <td>{{ form.score }}{{ form.score.errors }}</td>
+              <td>{{ form.comment }}{{ form.comment.errors }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% if correction_mode %}
+        {% include "partials/form_fields.html" with form=correction_form %}
+        <div class="form-actions"><button class="btn" type="submit" name="action" value="correct">Enregistrer la correction</button></div>
+      {% elif not is_locked %}
+        <div class="form-actions">
+          <button class="btn btn-secondary" type="submit" name="action" value="save">Enregistrer le brouillon</button>
+          <button class="btn" type="submit" name="action" value="publish">Publier les notes</button>
+        </div>
+      {% endif %}
+    </form>
+  {% else %}
+    <div class="empty">Aucun élève actif n'est inscrit dans cette classe.</div>
+  {% endif %}
+</section>
+
+{% if can_correct and is_locked %}
+  <section class="card">
+    <div class="card-head"><h2>Historique des corrections</h2></div>
+    {% if revisions %}
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Élève</th><th>Ancienne valeur</th><th>Nouvelle valeur</th><th>Motif</th><th>Par</th></tr></thead>
+        <tbody>{% for revision in revisions %}
+          <tr>
+            <td>{{ revision.created_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ revision.grade.enrollment.student.full_name }}</td>
+            <td>{{ revision.previous_score|default_if_none:"—" }} · {{ revision.get_previous_status_display|default:"—" }}</td>
+            <td>{{ revision.new_score|default_if_none:"—" }} · {{ revision.get_new_status_display }}</td>
+            <td>{{ revision.reason }}</td>
+            <td>{{ revision.changed_by_label }}</td>
+          </tr>
+        {% endfor %}</tbody>
+      </table></div>
+    {% else %}<div class="empty">Aucune correction enregistrée.</div>{% endif %}
+  </section>
+{% endif %}
+{% endblock %}

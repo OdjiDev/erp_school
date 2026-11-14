@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Structure académique — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Structure académique</h1>
+    <p class="muted">
+      Années scolaires, niveaux et séries · {{ school.code }}
+    </p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn" href="{% url 'school:subject_list' school.organization.slug school.code %}">Matières</a>
+    <a class="btn btn-secondary" href="{% url 'school:curriculum_list' school.organization.slug school.code %}">Coefficients</a>
+    <a class="btn btn-secondary" href="{% url 'school:dashboard' school.organization.slug school.code %}">Tableau de bord</a>
+  </div>
+</div>
+
+<section class="card" id="annees">
+  <div class="card-head">
+    <h2>Années scolaires</h2>
+    <a class="btn btn-sm"
+       href="{% url 'school:structure_year_create' school.organization.slug school.code %}">
+      Ajouter une année
+    </a>
+  </div>
+
+  {% if years %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Année</th>
+            <th>Début</th>
+            <th>Fin</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for year in years %}
+            <tr>
+              <td>
+                {{ year.name }}
+                {% if year == current_year %}
+                  <span class="badge badge-active">Courante</span>
+                {% endif %}
+              </td>
+              <td>{{ year.start_date|date:"d/m/Y" }}</td>
+              <td>{{ year.end_date|date:"d/m/Y" }}</td>
+              <td>
+                <a class="btn btn-secondary btn-sm"
+                   href="{% url 'school:structure_year_edit' school.organization.slug school.code year.id %}">
+                  Modifier
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not current_year %}
+      <div class="empty">
+        Aucune année n'est marquée comme courante. Les autres écrans utilisent
+        la plus récente par défaut ; modifiez une année pour la définir comme
+        courante.
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      Aucune année scolaire. Créez l'année en cours pour commencer.
+    </div>
+  {% endif %}
+</section>
+
+<section class="card" id="niveaux">
+  <div class="card-head">
+    <h2>Niveaux et séries</h2>
+    <a class="btn btn-sm"
+       href="{% url 'school:structure_level_create' school.organization.slug school.code %}">
+      Ajouter un niveau
+    </a>
+  </div>
+
+  <p class="muted">
+    Les niveaux et séries doivent exister avant de créer des classes ou
+    d'importer des élèves.
+  </p>
+
+  {% if levels %}
+    {% for level in levels %}
+      <div class="structure-level">
+        <div class="structure-level-head">
+          <div>
+            <strong>{{ level.name }}</strong>
+            <span class="muted">
+              code {{ level.code }} · ordre {{ level.order }}
+            </span>
+          </div>
+          <div class="actions">
+            <a class="btn btn-secondary btn-sm"
+               href="{% url 'school:structure_series_create' school.organization.slug school.code level.id %}">
+              Ajouter une série
+            </a>
+            <a class="btn btn-secondary btn-sm"
+               href="{% url 'school:structure_level_edit' school.organization.slug school.code level.id %}">
+              Modifier
+            </a>
+          </div>
+        </div>
+
+        {% if level.series.all %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Série</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for series in level.series.all %}
+                  <tr>
+                    <td>{{ series.code }}</td>
+                    <td>{{ series.name }}</td>
+                    <td>
+                      <a class="btn btn-secondary btn-sm"
+                         href="{% url 'school:structure_series_edit' school.organization.slug school.code series.id %}">
+                        Modifier
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty">Aucune série pour ce niveau.</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      Aucun niveau enregistré. Ajoutez un premier niveau, puis ses séries.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Affectations — {{ school_class.display_name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'school:class_detail' school.organization.slug school.code school_class.id %}">
+    ← Retour à {{ school_class.display_name }}
+  </a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>Affectations des enseignants</h1>
+    <p class="muted">
+      {{ school_class.display_name }} · {{ school_class.academic_year.name }}
+      · {{ school_class.level.name }} {{ school_class.series.name }}
+    </p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn btn-secondary" href="{% url 'school:teacher_list' school.organization.slug school.code %}">Enseignants</a>
+  </div>
+</div>
+
+{% if not has_teachers %}
+  <div class="callout">
+    Aucun enseignant actif dans cette école.
+    {% if request.can_manage_users %}
+      <a href="{% url 'school:user_create' school.organization.slug school.code %}">Créer un compte enseignant</a>.
+    {% else %}
+      Demandez à la direction de créer les comptes enseignants.
+    {% endif %}
+  </div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <h2>Matières de la classe</h2>
+  </div>
+
+  {% if formset.forms %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      {{ formset.management_form }}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Matière</th>
+              <th>Enseignant</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset %}
+              <tr>
+                <td>{{ form.instance.subject.code }}</td>
+                <td>{{ form.instance.subject.name }}</td>
+                <td>
+                  {{ form.id }}
+                  {{ form.teacher }}
+                  {{ form.teacher.errors }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {{ formset.non_form_errors }}
+      <div class="form-actions">
+        <button class="btn" type="submit">Enregistrer les affectations</button>
+      </div>
+    </form>
+  {% else %}
+    <div class="empty">
+      Aucune matière n'est encore rattachée à cette classe. Ajoutez-en une
+      ci-dessous.
+    </div>
+  {% endif %}
+</section>
+
+<section class="card structure-form">
+  <div class="card-head">
+    <h2>Ajouter une matière</h2>
+  </div>
+
+  {% if add_form.fields.subject.queryset %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      {% include "partials/form_fields.html" with form=add_form %}
+      <div class="form-actions">
+        <button class="btn" type="submit">Ajouter la matière</button>
+      </div>
+    </form>
+  {% else %}
+    <div class="empty">
+      Toutes les matières de l'école sont déjà rattachées à cette classe.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

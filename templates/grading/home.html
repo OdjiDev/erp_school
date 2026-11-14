@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Notes et bulletins — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Notes et bulletins</h1>
+    <p class="muted">Périodes, évaluations et résultats de l'établissement.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'school:assessment_list' school.organization.slug school.code %}">Toutes les évaluations</a>
+    <a class="btn btn-secondary" href="{% url 'school:report_card_list' school.organization.slug school.code %}">Consulter les bulletins</a>
+    {% if can_manage_periods %}
+      <a class="btn" href="{% url 'school:grading_period_create' school.organization.slug school.code %}">Nouvelle période</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if can_manage_periods and not periods %}
+  <div class="callout">Créez d'abord une période (trimestre, semestre ou période personnalisée), puis ajoutez les évaluations.</div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2>Périodes configurées</h2></div>
+  {% if periods %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Année scolaire</th><th>Période</th><th>Code</th><th>Ordre</th><th>Dates</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for period in periods %}
+            <tr>
+              <td>{{ period.academic_year.name }}</td>
+              <td>{{ period.name }}</td>
+              <td>{{ period.code }}</td>
+              <td>{{ period.sequence }}</td>
+              <td>{{ period.start_date|date:"d/m/Y"|default:"—" }} – {{ period.end_date|date:"d/m/Y"|default:"—" }}</td>
+              <td>{% if period.is_closed %}<span class="badge badge-active">Clôturée</span><div class="muted">{{ period.closed_at|date:"d/m/Y H:i" }}</div>{% else %}<span class="badge badge-warning">Ouverte</span>{% endif %}</td>
+              <td class="nowrap">
+                <a class="btn btn-secondary btn-sm" href="{% url 'school:assessment_list' school.organization.slug school.code %}?periode={{ period.id }}">Évaluations</a>
+                <a class="btn btn-secondary btn-sm" href="{% url 'school:report_card_list' school.organization.slug school.code %}?periode={{ period.id }}">Bulletins</a>
+                {% if can_manage_periods %}
+                  {% if period.is_closed %}
+                    <a class="btn btn-secondary btn-sm" href="{% url 'school:grading_period_reopen' school.organization.slug school.code period.id %}">Rouvrir</a>
+                  {% else %}
+                    <form method="post" action="{% url 'school:grading_period_close' school.organization.slug school.code period.id %}" class="inline-form" onsubmit="return confirm('Clôturer cette période et figer les bulletins ?')">
+                      {% csrf_token %}<button class="btn btn-secondary btn-sm" type="submit">Clore et figer</button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucune période n'est encore configurée.</div>
+  {% endif %}
+</section>
+{% endblock %}

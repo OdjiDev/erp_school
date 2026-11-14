@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Import Excel — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Import Excel</h1>
+    <p class="muted">
+      Matières, coefficients par série et élèves · {{ school.code }}
+    </p>
+  </div>
+  <a class="btn btn-secondary"
+     href="{% url 'school:excel_template' school.organization.slug school.code %}">
+    Télécharger le modèle
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Classeur à importer</h2>
+  </div>
+  <p class="muted">
+    Le classeur doit contenir les feuilles <strong>Matieres</strong>,
+    <strong>Coefficients</strong> et <strong>Eleves</strong>. L'import est
+    transactionnel : si une ligne est invalide, aucune donnée n'est
+    enregistrée. Lancez d'abord une simulation pour contrôler le fichier.
+  </p>
+
+  {% if not has_years %}
+    <div class="callout">
+      Aucune année scolaire n'est configurée pour cet établissement.
+      Créez une année scolaire avant de lancer un import.
+    </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="import-form">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+      <label for="{{ form.fichier.id_for_label }}">{{ form.fichier.label }}</label>
+      {{ form.fichier }}
+      {% if form.fichier.help_text %}
+        <span class="muted">{{ form.fichier.help_text }}</span>
+      {% endif %}
+      {{ form.fichier.errors }}
+    </div>
+
+    <div class="field">
+      <label for="{{ form.annee.id_for_label }}">{{ form.annee.label }}</label>
+      {{ form.annee }}
+      <span class="muted">
+        Les matières et coefficients seront rattachés à cette année.
+      </span>
+      {{ form.annee.errors }}
+    </div>
+
+    <div class="checkbox-row">
+      {{ form.dry_run }}
+      <label for="{{ form.dry_run.id_for_label }}">{{ form.dry_run.label }}</label>
+    </div>
+
+    <div class="checkbox-row">
+      {{ form.creer_classes }}
+      <label for="{{ form.creer_classes.id_for_label }}">
+        {{ form.creer_classes.label }}
+      </label>
+    </div>
+
+    <button class="btn" type="submit">Lancer l'import</button>
+  </form>
+</div>
+
+{% if report %}
+  <div class="card">
+    <div class="card-head">
+      <h2>Résultat de l'import</h2>
+      {% if report.has_errors %}
+        <span class="badge badge-warning">Annulé</span>
+      {% else %}
+        <span class="badge badge-active">Terminé</span>
+      {% endif %}
+    </div>
+
+    {% if report.has_errors %}
+      <div class="alert alert-error">
+        Aucune donnée n'a été enregistrée. Corrigez les lignes ci-dessous,
+        puis relancez l'import.
+      </div>
+    {% elif dry_run %}
+      <div class="alert alert-warning">
+        Simulation réussie : aucune donnée n'a été enregistrée.
+        Décochez « Simulation uniquement » pour appliquer l'import.
+      </div>
+    {% else %}
+      <div class="alert alert-success">
+        Import terminé : les données ont été enregistrées.
+      </div>
+    {% endif %}
+
+    <div class="report-grid">
+      <div>
+        <h3>Créés</h3>
+        <ul>
+          {% for label, count in report.created_items %}
+            <li>{{ count }} — {{ label }}</li>
+          {% empty %}
+            <li>Aucun élément créé.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div>
+        <h3>Mis à jour</h3>
+        <ul>
+          {% for label, count in report.updated_items %}
+            <li>{{ count }} — {{ label }}</li>
+          {% empty %}
+            <li>Aucun élément mis à jour.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    {% for message in report.warnings %}
+      <div class="alert alert-warning">{{ message }}</div>
+    {% endfor %}
+
+    {% for message in report.errors %}
+      <div class="alert alert-error">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}
