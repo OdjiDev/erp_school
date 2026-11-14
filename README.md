@@ -266,7 +266,10 @@ La suite couvre notamment :
 - matières, coefficients et classes : unicité, reprise des matières du
   programme, verrouillage après inscription, affectations et export `.xlsx` ;
 - utilisateurs et rôles : portées école/organisation, refus d'escalade,
-  auto-protection, réinitialisation de mot de passe et liste des enseignants.
+  auto-protection, réinitialisation de mot de passe et liste des enseignants ;
+- notes et bulletins : pondération, publication, corrections motivées,
+  délibérations, clôture avec versions figées, réouverture motivée et
+  immuabilité des archives.
 
 ## Structure
 
@@ -309,7 +312,7 @@ Le nom d'une école ou d'une classe n'est jamais utilisé comme clé.
 ## Prochaines étapes
 
 1. Vérifier les règles de calcul et modèles de bulletin avec les écoles pilotes.
-2. Ajouter le PDF serveur et la recette de clôture/réouverture des périodes.
+2. Ajouter le PDF serveur des bulletins.
 3. Sauvegardes, restauration et recette de déploiement du nœud local.
 4. Frais scolaires, paiements, synchronisation locale/cloud et portail parent.
 
