@@ -10,6 +10,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.docker.example
 
 # Base de données locale
 db.sqlite3

@@ -26,10 +26,12 @@ fonctionnement hors ligne sur chaque site.
 
 - Python 3.14, Django 6.1
 - PostgreSQL 16+ en production, SQLite en développement
+- Gunicorn et WhiteNoise dans une image Docker de production
 - Templates Django + CSS, HTMX prévu pour les écrans interactifs
 - Django Ninja pour l'API de synchronisation (à venir)
 - Impression des bulletins via le navigateur (PDF serveur à venir)
 - openpyxl pour les imports Excel (Tranche 1)
+- GitHub Actions pour les tests, la publication GHCR et le déploiement
 
 ## Démarrage
 
@@ -56,6 +58,54 @@ tuteurs et des inscriptions. La commande est idempotente.
 Pour utiliser PostgreSQL, renseigner `POSTGRES_DB`, `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, `POSTGRES_HOST` et `POSTGRES_PORT` dans `.env`.
 Sans `POSTGRES_DB`, le projet utilise `db.sqlite3`.
+
+## Docker
+
+Le nœud local ou cloud peut fonctionner avec Docker Compose : un conteneur
+Gunicorn/WhiteNoise et un conteneur PostgreSQL 17.
+
+Prérequis : Docker Engine ou Docker Desktop avec Compose 2.24+.
+
+```powershell
+Copy-Item .env.docker.example .env
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Renseigner la valeur générée dans `DJANGO_SECRET_KEY`, puis choisir un
+`POSTGRES_PASSWORD` solide dans `.env`.
+
+```powershell
+docker compose up -d --build
+docker compose exec web python manage.py seed_demo
+docker compose exec web python manage.py createsuperuser
+```
+
+- Application : `http://127.0.0.1:8000/`
+- Contrôle de santé : `http://127.0.0.1:8000/health/`
+- Journaux : `docker compose logs -f web`
+- Arrêt : `docker compose down` (le volume PostgreSQL est conservé)
+- Destruction des données : `docker compose down -v` (à éviter)
+
+Fonctionnement de l'image :
+
+- l'entrypoint attend PostgreSQL, applique les migrations et collecte les
+  fichiers statiques avant de lancer Gunicorn ;
+- le secret `change-me` est refusé lorsque `DJANGO_DEBUG=0` ;
+- `RUN_MIGRATIONS=0` et `RUN_COLLECTSTATIC=0` permettent de désactiver ces
+  étapes si elles sont exécutées séparément ;
+- `WEB_BIND=0.0.0.0` expose l'application au réseau local de l'école ;
+- derrière un reverse proxy HTTPS, utiliser `WEB_BIND=127.0.0.1`,
+  `DJANGO_SECURE_SSL=1`, `DJANGO_ALLOWED_HOSTS` et
+  `DJANGO_CSRF_TRUSTED_ORIGINS` adaptés, puis régler
+  `FORWARDED_ALLOW_IPS` sur l'adresse du proxy.
+
+Sauvegarde PostgreSQL :
+
+```powershell
+docker compose exec -T db pg_dump -U school -d school -Fc > sauvegarde.dump
+```
+
+Adapter `-U` et `-d` si `POSTGRES_USER` ou `POSTGRES_DB` ont été changés.
 
 ## Accès et isolation
 
@@ -234,6 +284,9 @@ Options utiles : `--annee`, `--dry-run`, `--sans-creation-classes`.
 - `DJANGO_SECURE_SSL=1` active HTTPS, HSTS et les cookies sécurisés pour le
   cloud derrière un reverse proxy.
 - Les nœuds locaux ne doivent pas activer HSTS s'ils servent du HTTP en LAN.
+- L'image Docker attend PostgreSQL, refuse le secret `change-me` lorsque
+  `DJANGO_DEBUG=0`, applique les migrations et collecte les fichiers statiques
+  avant de lancer Gunicorn.
 
 ## Tests
 
@@ -271,6 +324,32 @@ La suite couvre notamment :
   délibérations, clôture avec versions figées, réouverture motivée et
   immuabilité des archives.
 
+## CI/CD
+
+Deux workflows GitHub Actions sont fournis :
+
+- `.github/workflows/ci.yml` exécute les tests sur PostgreSQL 17, vérifie
+  Django et les migrations, construit l'image Docker puis teste son démarrage,
+  son endpoint de santé, ses fichiers statiques et la page de connexion ;
+- `.github/workflows/cd.yml` publie l'image sur GHCR avec SBOM et provenance
+  lors des push sur `main` et des tags `v*`, puis peut déployer par SSH.
+
+Le déploiement est désactivé par défaut. Pour l'activer, créer la variable de
+dépôt `DEPLOY_ENABLED=true` et les secrets suivants dans l'environnement
+GitHub `production` :
+
+- `DEPLOY_HOST` : hôte SSH du serveur ;
+- `DEPLOY_USER` : utilisateur SSH ;
+- `DEPLOY_SSH_KEY` : clé privée autorisée sur le serveur ;
+- `DEPLOY_PATH` : répertoire contenant le `.env` et `compose.yaml` ;
+- `DEPLOY_KNOWN_HOSTS` : optionnel, empreinte de l'hôte pour éviter
+  `ssh-keyscan`.
+
+Le serveur doit avoir Docker Compose et un `.env` configuré. Le workflow copie
+`compose.yaml`, tire l'image immuable `sha-<commit>` et exécute
+`docker compose up -d --wait`. L'image est publiée sous
+`ghcr.io/odjidev/erp_school`.
+
 ## Structure
 
 ```text
@@ -282,6 +361,10 @@ apps/students/           Élèves, tuteurs, inscriptions
 apps/grading/            Périodes, évaluations, notes et bulletins
 templates/               Interface française
 static/css/              Feuille de style locale, sans CDN
+Dockerfile               Image de production Python 3.14
+compose.yaml             Web + PostgreSQL 17
+docker/entrypoint.sh     Attente PostgreSQL, migrations, Gunicorn
+.github/workflows/       CI, publication GHCR et déploiement
 docs/cadrage/            Cadrage fonctionnel et technique
 docs/decisions/          Décisions d'architecture (ADR)
 ```
@@ -313,7 +396,7 @@ Le nom d'une école ou d'une classe n'est jamais utilisé comme clé.
 
 1. Vérifier les règles de calcul et modèles de bulletin avec les écoles pilotes.
 2. Ajouter le PDF serveur des bulletins.
-3. Sauvegardes, restauration et recette de déploiement du nœud local.
+3. Automatiser les sauvegardes, la restauration et la supervision du nœud local.
 4. Frais scolaires, paiements, synchronisation locale/cloud et portail parent.
 
 ## Points à confirmer

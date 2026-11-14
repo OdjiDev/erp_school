@@ -27,9 +27,10 @@ _load_env_file(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-if not DEBUG and SECRET_KEY == "dev-only-change-me":
+if not DEBUG and SECRET_KEY in {"", "dev-only-change-me", "change-me"}:
     raise ImproperlyConfigured(
-        "DJANGO_SECRET_KEY doit être défini lorsque DJANGO_DEBUG=0."
+        "DJANGO_SECRET_KEY doit être défini avec une valeur unique "
+        "lorsque DJANGO_DEBUG=0."
     )
 
 ALLOWED_HOSTS = [
@@ -61,6 +62,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -138,6 +140,13 @@ if SECURE_SSL:
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 LOGIN_URL = "school:login"
 LOGIN_REDIRECT_URL = "school:home"
