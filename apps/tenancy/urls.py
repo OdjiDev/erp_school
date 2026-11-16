@@ -2,6 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from apps.academics import views as academic_views
+from apps.finance import views as finance_views
 from apps.grading import views as grading_views
 from apps.students import views as student_views
 
@@ -279,6 +280,136 @@ urlpatterns = [
         "o/<slug:org_slug>/s/<str:school_code>/bulletins/<uuid:enrollment_id>/<uuid:period_id>/",
         grading_views.report_card_print,
         name="report_card_print",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/",
+        finance_views.finance_home,
+        name="finance_home",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/frais/",
+        finance_views.fee_list,
+        name="finance_fee_list",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/frais/nouveau/",
+        finance_views.fee_create,
+        name="finance_fee_create",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/frais/<uuid:fee_id>/modifier/",
+        finance_views.fee_edit,
+        name="finance_fee_edit",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/echeanciers/",
+        finance_views.plan_list,
+        name="finance_plan_list",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/echeanciers/nouveau/",
+        finance_views.plan_create,
+        name="finance_plan_create",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/echeanciers/<uuid:plan_id>/modifier/",
+        finance_views.plan_edit,
+        name="finance_plan_edit",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/remises/",
+        finance_views.discount_list,
+        name="finance_discount_list",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/remises/nouvelle/",
+        finance_views.discount_create,
+        name="finance_discount_create",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/remises/<uuid:discount_id>/modifier/",
+        finance_views.discount_edit,
+        name="finance_discount_edit",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/factures/",
+        finance_views.invoice_list,
+        name="finance_invoice_list",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/factures/nouvelle/",
+        finance_views.invoice_generate,
+        name="finance_invoice_generate",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/factures/<uuid:invoice_id>/",
+        finance_views.invoice_detail,
+        name="finance_invoice_detail",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/factures/<uuid:invoice_id>/imprimer/",
+        finance_views.invoice_print,
+        name="finance_invoice_print",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/factures/<uuid:invoice_id>/annuler/",
+        finance_views.invoice_cancel,
+        name="finance_invoice_cancel",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/factures/<uuid:invoice_id>/encaisser/",
+        finance_views.payment_create,
+        name="finance_payment_create",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/encaissements/",
+        finance_views.payment_list,
+        name="finance_payment_list",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/recus/<uuid:payment_id>/",
+        finance_views.payment_receipt,
+        name="finance_payment_receipt",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/recus/<uuid:payment_id>/annuler/",
+        finance_views.payment_cancel,
+        name="finance_payment_cancel",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/impayes/",
+        finance_views.overdue_list,
+        name="finance_overdue_list",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/caisse/",
+        finance_views.cash_home,
+        name="finance_cash_home",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/caisse/ouvrir/",
+        finance_views.cash_open,
+        name="finance_cash_open",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/caisse/<uuid:session_id>/",
+        finance_views.cash_detail,
+        name="finance_cash_detail",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/caisse/<uuid:session_id>/cloturer/",
+        finance_views.cash_close,
+        name="finance_cash_close",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/export/",
+        finance_views.finance_export,
+        name="finance_export",
+    ),
+    path(
+        "o/<slug:org_slug>/s/<str:school_code>/finances/export/telecharger/",
+        finance_views.finance_export_download,
+        name="finance_export_download",
     ),
     path(
         "o/<slug:org_slug>/s/<str:school_code>/import/",

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvelle facture — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Générer des factures</h1>
+    <p class="muted">
+      Les frais actifs, les remises et l'échéancier le plus spécifique sont
+      appliqués automatiquement. Une seule facture active est possible par élève
+      et par année.
+    </p>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'school:finance_invoice_list' school.organization.slug school.code %}">Factures</a>
+</div>
+
+<div class="callout">
+  <strong>Avant de facturer :</strong>
+  vérifiez que les <a href="{% url 'school:finance_fee_list' school.organization.slug school.code %}">frais</a>
+  et l'<a href="{% url 'school:finance_plan_list' school.organization.slug school.code %}">échéancier</a>
+  de l'année sont actifs. Le total des pourcentages de l'échéancier doit être
+  égal à 100 %.
+</div>
+
+<div class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Générer la facture</button>
+      <a class="btn btn-secondary" href="{% url 'school:finance_invoice_list' school.organization.slug school.code %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Export comptable — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Export comptable</h1>
+    <p class="muted">Classeur Excel des factures, encaissements, impayés et caisses.</p>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+</div>
+
+<div class="grid-2">
+  <section class="card structure-form">
+    <div class="card-head"><h2>Choisir l'année</h2></div>
+    <form method="get">
+      {% include "partials/form_fields.html" with form=form %}
+      <div class="form-actions">
+        <button class="btn" type="submit">Télécharger le classeur Excel</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Contenu du classeur</h2></div>
+    <ul class="plain-list">
+      <li><strong>Synthèse</strong> : total facturé, remises, encaissements, solde et impayés échus.</li>
+      <li><strong>Factures</strong> : numéro, élève, classe, montants, statut et échéance.</li>
+      <li><strong>Encaissements</strong> : reçus, dates, modes, références, caisse et annulations.</li>
+      <li><strong>Impayés</strong> : échéances en retard, montants dus et jours de retard.</li>
+      <li><strong>Caisse</strong> : fonds, espèces attendues, montants comptés et écarts.</li>
+    </ul>
+    <p class="muted">
+      Les montants sont exprimés en francs CFA. Les factures et paiements
+      annulés restent visibles pour la piste d'audit, mais sont exclus des
+      totaux de synthèse.
+    </p>
+  </section>
+</div>
+{% endblock %}

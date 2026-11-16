@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Facture {{ invoice.number }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head no-print">
+  <div>
+    <h1>Facture {{ invoice.number }}</h1>
+    <p class="muted">{{ invoice.student.full_name }} · {{ invoice.academic_year.name }}</p>
+  </div>
+  <div class="actions">
+    <button class="btn" type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <a class="btn btn-secondary" href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">Retour</a>
+  </div>
+</div>
+
+<div class="report-card doc-card">
+  <div class="report-heading">
+    <div>
+      <h2>{{ school.name }}</h2>
+      <p>Établissement {{ school.code }} · {{ school.organization.name }}</p>
+      <p>Année scolaire {{ invoice.academic_year.name }}</p>
+    </div>
+    <div class="report-period">
+      <strong>FACTURE</strong>
+      <span>{{ invoice.number }}</span>
+      <span>Émise le {{ invoice.issue_date|date:"d/m/Y" }}</span>
+      <span>Échéance : {{ invoice.due_date|date:"d/m/Y" }}</span>
+    </div>
+  </div>
+
+  <div class="doc-meta">
+    <div>
+      <span class="report-label">Élève</span>
+      <strong>{{ invoice.student.full_name }}</strong>
+      <span>{{ invoice.student.matricule }}</span>
+    </div>
+    <div>
+      <span class="report-label">Classe</span>
+      <strong>{{ invoice.enrollment.school_class.display_name|default:"—" }}</strong>
+      <span>{{ invoice.enrollment.school_class.level.name|default:"" }} {{ invoice.enrollment.school_class.series.name|default:"" }}</span>
+    </div>
+    <div>
+      <span class="report-label">Statut</span>
+      <strong>{{ invoice.get_status_display }}</strong>
+      {% if invoice.status == 'cancelled' %}<span>Annulée</span>{% endif %}
+    </div>
+  </div>
+
+  <table class="report-table doc-table">
+    <thead>
+      <tr><th>Désignation</th><th class="numeric">Montant</th></tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+        <tr><td>{{ line.description }}</td><td class="numeric">{{ line.amount|fcfa }}</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td>Sous-total</td><td class="numeric">{{ invoice.subtotal|fcfa }}</td></tr>
+      {% for discount in discounts %}
+        <tr><td>Remise — {{ discount.label }}</td><td class="numeric">− {{ discount.amount|fcfa }}</td></tr>
+      {% endfor %}
+      <tr><td><strong>Net à payer</strong></td><td class="numeric"><strong>{{ invoice.total|fcfa }}</strong></td></tr>
+      <tr><td>Déjà encaissé</td><td class="numeric">{{ invoice.paid_total|fcfa }}</td></tr>
+      <tr><td><strong>Solde restant</strong></td><td class="numeric"><strong>{{ invoice.balance|fcfa }}</strong></td></tr>
+    </tfoot>
+  </table>
+
+  <div class="doc-installments">
+    <h3>Échéancier</h3>
+    <table class="report-table doc-table">
+      <thead><tr><th>Échéance</th><th>Date</th><th class="numeric">Montant</th><th class="numeric">Payé</th><th class="numeric">Solde</th></tr></thead>
+      <tbody>
+        {% for installment in installments %}
+          <tr>
+            <td>{{ installment.label }}</td>
+            <td>{{ installment.due_date|date:"d/m/Y" }}</td>
+            <td class="numeric">{{ installment.amount|fcfa }}</td>
+            <td class="numeric">{{ installment.paid_amount|fcfa }}</td>
+            <td class="numeric">{{ installment.balance|fcfa }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if invoice.notes %}
+    <p class="doc-note"><strong>Note :</strong> {{ invoice.notes|linebreaksbr }}</p>
+  {% endif %}
+
+  <div class="report-signatures">
+    <div><span>Le comptable</span><div class="signature-line"></div></div>
+    <div><span>La direction</span><div class="signature-line"></div></div>
+  </div>
+
+  <p class="report-footer">
+    Facture générée par Gestion scolaire — {{ school.name }} ({{ school.code }}).
+    Les montants sont exprimés en francs CFA.
+  </p>
+</div>
+{% endblock %}

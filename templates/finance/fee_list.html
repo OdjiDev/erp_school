@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Frais scolaires — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Frais scolaires</h1>
+    <p class="muted">Montants appliqués aux factures, par niveau et par série.</p>
+  </div>
+  <div class="actions">
+    {% if can_manage_finance %}
+      <a class="btn" href="{% url 'school:finance_fee_create' school.organization.slug school.code %}">Nouveau frais</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="annee">Année scolaire</label>
+      <select id="annee" name="annee">
+        {% for year in years %}
+          <option value="{{ year.id }}"{% if selected_year and year.id == selected_year.id %} selected{% endif %}>{{ year.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">Afficher</button>
+  </form>
+
+  {% if fees %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Libellé</th><th>Niveau</th><th>Série</th><th>Montant</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for fee in fees %}
+            <tr>
+              <td>
+                <strong>{{ fee.name }}</strong>
+                <div class="muted">{{ fee.academic_year.name }}</div>
+              </td>
+              <td>{{ fee.level.name|default:"Tous" }}</td>
+              <td>{{ fee.series.name|default:"Toutes" }}</td>
+              <td class="numeric">{{ fee.amount|fcfa }}</td>
+              <td>
+                {% if fee.is_active %}
+                  <span class="badge badge-active">Actif</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactif</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                {% if can_manage_finance %}
+                  <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_fee_edit' school.organization.slug school.code fee.id %}">Modifier</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Aucun frais défini pour cette année.
+      {% if can_manage_finance %}
+        <a href="{% url 'school:finance_fee_create' school.organization.slug school.code %}">Créer le premier frais</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

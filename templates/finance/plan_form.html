@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ form_title }}</h1>
+    <p class="muted">{{ form_intro }}</p>
+  </div>
+  <a class="btn btn-secondary" href="{{ cancel_url }}">Retour</a>
+</div>
+
+<div class="card structure-form">
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" with form=form %}
+
+    <div class="section-head">
+      <h2>Échéances</h2>
+      <p class="muted">Le total des pourcentages doit être égal à 100 %.</p>
+    </div>
+
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+      <div class="alert alert-error">{{ formset.non_form_errors }}</div>
+    {% endif %}
+
+    <div class="table-wrap">
+      <table class="formset-table">
+        <thead>
+          <tr>
+            <th>Ordre</th>
+            <th>Libellé</th>
+            <th>Date d'échéance</th>
+            <th>Pourcentage (%)</th>
+            <th>Supprimer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line_form in formset %}
+            <tr>
+              {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
+              <td>
+                {{ line_form.sequence }}
+                {{ line_form.sequence.errors }}
+              </td>
+              <td>
+                {{ line_form.label }}
+                {{ line_form.label.errors }}
+              </td>
+              <td>
+                {{ line_form.due_date }}
+                {{ line_form.due_date.errors }}
+              </td>
+              <td>
+                {{ line_form.percentage }}
+                {{ line_form.percentage.errors }}
+              </td>
+              <td>
+                {{ line_form.DELETE }}
+                {% if line_form.instance.pk %}<span class="muted">Supprimer</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">{{ submit_label|default:"Enregistrer" }}</button>
+      <a class="btn btn-secondary" href="{{ cancel_url }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

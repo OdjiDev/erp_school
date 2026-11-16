@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Reçu {{ payment.receipt_number }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head no-print">
+  <div>
+    <h1>Reçu {{ payment.receipt_number }}</h1>
+    <p class="muted">{{ payment.invoice.student.full_name }} · {{ payment.paid_at|date:"d/m/Y" }}</p>
+  </div>
+  <div class="actions">
+    <button class="btn" type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <a class="btn btn-secondary" href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">Retour à la facture</a>
+  </div>
+</div>
+
+<div class="report-card receipt-card{% if payment.is_cancelled %} receipt-cancelled{% endif %}">
+  <div class="report-heading">
+    <div>
+      <h2>{{ school.name }}</h2>
+      <p>Établissement {{ school.code }} · {{ school.organization.name }}</p>
+      <p>Année scolaire {{ invoice.academic_year.name }}</p>
+    </div>
+    <div class="report-period">
+      <strong>REÇU DE PAIEMENT</strong>
+      <span>{{ payment.receipt_number }}</span>
+      <span>{{ payment.paid_at|date:"d/m/Y" }}</span>
+    </div>
+  </div>
+
+  {% if payment.is_cancelled %}
+    <div class="receipt-stamp">ANNULÉ</div>
+  {% endif %}
+
+  <div class="doc-meta">
+    <div>
+      <span class="report-label">Reçu de</span>
+      <strong>{{ invoice.student.full_name }}</strong>
+      <span>{{ invoice.student.matricule }}</span>
+    </div>
+    <div>
+      <span class="report-label">Classe</span>
+      <strong>{{ invoice.enrollment.school_class.display_name|default:"—" }}</strong>
+      <span>{{ invoice.academic_year.name }}</span>
+    </div>
+    <div>
+      <span class="report-label">Facture</span>
+      <strong>{{ invoice.number }}</strong>
+      <span>Solde actuel : {{ invoice.balance|fcfa }}</span>
+    </div>
+  </div>
+
+  <div class="receipt-amount">
+    <span class="report-label">Montant encaissé</span>
+    <strong>{{ payment.amount|fcfa }}</strong>
+  </div>
+
+  <table class="report-table doc-table">
+    <tbody>
+      <tr><th>Mode de paiement</th><td>{{ payment.get_method_display }}</td></tr>
+      <tr><th>Référence</th><td>{{ payment.reference|default:"—" }}</td></tr>
+      <tr><th>Encaissé par</th><td>{{ payment.received_by.get_username|default:"—" }}</td></tr>
+      <tr><th>Caisse</th><td>{{ payment.cash_session|default:"Hors caisse" }}</td></tr>
+      {% if payment.notes %}<tr><th>Observation</th><td>{{ payment.notes|linebreaksbr }}</td></tr>{% endif %}
+      {% if payment.is_cancelled %}
+        <tr><th>Annulation</th><td>{{ payment.cancelled_at|date:"d/m/Y H:i" }} — {{ payment.cancellation_reason }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <p class="doc-note">
+    Ce reçu atteste le paiement de la somme indiquée. Il ne vaut pas
+    mainlevée des autres échéances de la facture.
+  </p>
+
+  <div class="report-signatures">
+    <div><span>Le caissier</span><div class="signature-line"></div></div>
+    <div><span>Cachet de l'établissement</span><div class="signature-line"></div></div>
+  </div>
+
+  <p class="report-footer">
+    Reçu généré par Gestion scolaire — {{ school.name }} ({{ school.code }}).
+    Montants exprimés en francs CFA.
+  </p>
+</div>
+{% endblock %}

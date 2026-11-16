@@ -6,19 +6,21 @@ fonctionnement hors ligne sur chaque site.
 
 ## État actuel
 
-- Tranches 0/1 en cours ; un premier incrément de la tranche 2 (notes et bulletins imprimables) est intégré.
-- Apps disponibles : `tenancy`, `academics`, `students`, `grading`.
+- Tranches 0/1 en cours ; les notes et bulletins imprimables ainsi que le
+  module finances sont intégrés.
+- Apps disponibles : `tenancy`, `academics`, `students`, `grading`, `finance`.
 - Interface web : connexion, sélection d'école, tableau de bord, structure
   académique (années, niveaux, séries), matières et coefficients, élèves,
   tuteurs, inscriptions, classes, utilisateurs/rôles, enseignants et import
-  Excel, évaluations, saisie des notes et bulletins.
+  Excel, évaluations, saisie des notes, bulletins, frais scolaires, factures,
+  encaissements, reçus, impayés, caisse et export comptable.
 - Listes de classe imprimables et export Excel des effectifs.
 - Contrôle d'accès par organisation et par école.
 - Import Excel des matières, coefficients par série et élèves, avec modèle
   téléchargeable, simulation et transaction tout-ou-rien.
 - Managers ORM multi-tenant fermés sans contexte, avec accès système explicite
   via `all_objects`.
-- Pas encore de synchronisation locale/cloud, de finances ni de portail parent.
+- Pas encore de synchronisation locale/cloud ni de portail parent.
 - La clôture des périodes et les versions figées des bulletins sont intégrées ;
   les PDF serveur et la recette avec les écoles pilotes restent à compléter.
 
@@ -53,7 +55,9 @@ python manage.py runserver
 
 `seed_demo` crée une organisation de démonstration avec **deux écoles
 homonymes** (`DEMO-A`, `DEMO-B`), des classes parallèles, des élèves, des
-tuteurs et des inscriptions. La commande est idempotente.
+tuteurs, des inscriptions, des frais, un échéancier en trois tranches, une
+remise, des factures, une caisse ouverte et des encaissements. La commande est
+idempotente.
 
 Pour utiliser PostgreSQL, renseigner `POSTGRES_DB`, `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, `POSTGRES_HOST` et `POSTGRES_PORT` dans `.env`.
@@ -243,6 +247,49 @@ année scolaire (trimestre, semestre ou libellé personnalisé), de créer des
 - La règle de passage, les appréciations et le modèle officiel malien restent
   à valider avec les écoles pilotes.
 
+## Finances
+
+Le menu **Finances** couvre les frais scolaires, les échéanciers, les remises,
+les factures, les encaissements, les reçus, les impayés, la caisse et l'export
+comptable. Tous les montants sont exprimés en francs CFA, avec deux décimales.
+
+- **Frais** : montant par année, éventuellement restreint à un niveau et à une
+  série. Les frais actifs correspondant à la classe de l'élève sont repris sur
+  la facture ; un frais général s'ajoute aux frais spécifiques.
+- **Échéanciers** : tranches avec libellé, date et pourcentage. Le total doit
+  être exactement égal à 100 %. L'échéancier le plus spécifique (série, puis
+  niveau, puis école) est appliqué et figé sur la facture.
+- **Remises** : pourcentage ou montant fixe, accordées à un élève pour une
+  année. Les remises actives sont appliquées et figées au moment de la
+  facturation.
+- **Factures** : numérotation continue par école et année (`FAC-2026-00001`).
+  Une seule facture active est autorisée par élève et par année ; une facture
+  annulée permet d'en générer une nouvelle. La génération est individuelle ou
+  par classe.
+- **Encaissements** : espèces, Orange Money, Wave, Mobicash, virement ou
+  chèque, avec référence de transaction. Les reçus sont numérotés en continu
+  (`REC-2026-00001`). Le paiement est affecté aux échéances dans l'ordre.
+  Un paiement en espèces exige une caisse ouverte.
+- **Impayés** : échéances échues avec solde, filtrées par année, classe et date
+  d'observation, avec calcul du retard.
+- **Caisse** : une seule session ouverte par école, fonds initial, total
+  attendu, montant compté et écart de clôture. Un paiement de caisse ne peut
+  plus être annulé après la clôture.
+- **Export comptable** : classeur `.xlsx` avec les feuilles `Synthèse`,
+  `Factures`, `Encaissements`, `Impayes` et `Caisse`.
+
+Rôles :
+
+- gestion (frais, échéanciers, remises, factures, annulations, caisse) :
+  administrateurs plateforme, client et école, comptable ;
+- encaissement : les rôles de gestion et le secrétariat ;
+- consultation : les rôles précédents et l'auditeur ;
+- les enseignants n'ont pas accès au module.
+
+Les paiements Orange Money, Wave et Mobicash sont saisis manuellement pour
+l'instant ; les contrats, les callbacks et le rapprochement automatique restent
+à cadrer avec les opérateurs.
+
 ## Import Excel
 
 Depuis l'interface : menu **Import Excel**, puis bouton **Télécharger le
@@ -322,7 +369,11 @@ La suite couvre notamment :
   auto-protection, réinitialisation de mot de passe et liste des enseignants ;
 - notes et bulletins : pondération, publication, corrections motivées,
   délibérations, clôture avec versions figées, réouverture motivée et
-  immuabilité des archives.
+  immuabilité des archives ;
+- finances : frais par niveau/série, échéanciers à 100 %, remises, facturation
+  individuelle ou par classe, numérotation continue, encaissements partiels et
+  totaux, annulations tracées, caisse et clôture, impayés, export Excel,
+  isolation par école et rôles de gestion/encaissement/consultation.
 
 ## CI/CD
 
@@ -359,6 +410,7 @@ apps/tenancy/            Organisations, écoles, sites, rôles, accès web
 apps/academics/          Années, niveaux, séries, matières, classes
 apps/students/           Élèves, tuteurs, inscriptions
 apps/grading/            Périodes, évaluations, notes et bulletins
+apps/finance/            Frais, factures, paiements, caisse et export
 templates/               Interface française
 static/css/              Feuille de style locale, sans CDN
 Dockerfile               Image de production Python 3.14
@@ -395,9 +447,10 @@ Le nom d'une école ou d'une classe n'est jamais utilisé comme clé.
 ## Prochaines étapes
 
 1. Vérifier les règles de calcul et modèles de bulletin avec les écoles pilotes.
-2. Ajouter le PDF serveur des bulletins.
+2. Ajouter le PDF serveur des bulletins et des états financiers.
 3. Automatiser les sauvegardes, la restauration et la supervision du nœud local.
-4. Frais scolaires, paiements, synchronisation locale/cloud et portail parent.
+4. Intégrer les API Orange Money, Wave et Mobicash.
+5. Mettre en place la synchronisation locale/cloud et le portail parent.
 
 ## Points à confirmer
 

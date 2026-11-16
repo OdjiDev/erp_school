@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Caisse du {{ session.opened_at|date:"d/m/Y" }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb no-print">
+  <a href="{% url 'school:finance_cash_home' school.organization.slug school.code %}">← Retour à la caisse</a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>Caisse du {{ session.opened_at|date:"d/m/Y H:i" }}</h1>
+    <p class="muted">
+      {% if session.status == 'open' %}
+        <span class="badge badge-active">Ouverte</span>
+      {% else %}
+        <span class="badge badge-inactive">Clôturée</span>
+      {% endif %}
+      {% if session.site %} · {{ session.site.name }}{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    {% if can_manage_finance and session.status == 'open' %}
+      <a class="btn" href="{% url 'school:finance_cash_close' school.organization.slug school.code session.id %}">Clôturer la caisse</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:finance_payment_list' school.organization.slug school.code %}">Encaissements</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <span class="stat-label">Fonds initial</span>
+    <span class="stat-value stat-value-money">{{ session.opening_float|fcfa }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Espèces encaissées</span>
+    <span class="stat-value stat-value-money">{{ summary.cash_total|fcfa }}</span>
+    <span class="muted">{{ summary.count }} paiement{{ summary.count|pluralize }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Total attendu</span>
+    <span class="stat-value stat-value-money">
+      {% if session.expected_cash is not None %}{{ session.expected_cash|fcfa }}{% else %}{{ summary.expected_cash|fcfa }}{% endif %}
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Écart de clôture</span>
+    <span class="stat-value stat-value-money">
+      {% if session.difference is not None %}{{ session.difference|fcfa }}{% else %}—{% endif %}
+    </span>
+    {% if session.counted_cash is not None %}
+      <span class="muted">Compté : {{ session.counted_cash|fcfa }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Informations de session</h2></div>
+  <dl class="detail-grid">
+    <div><dt>Ouverte par</dt><dd>{{ session.opened_by.get_username|default:"—" }}</dd></div>
+    <div><dt>Ouverte le</dt><dd>{{ session.opened_at|date:"d/m/Y H:i" }}</dd></div>
+    <div><dt>Clôturée par</dt><dd>{{ session.closed_by.get_username|default:"—" }}</dd></div>
+    <div><dt>Clôturée le</dt><dd>{{ session.closed_at|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+    <div><dt>Fonds de caisse</dt><dd>{{ session.opening_float|fcfa }}</dd></div>
+    <div><dt>Site</dt><dd>{{ session.site.name|default:"Caisse principale" }}</dd></div>
+    {% if session.notes %}
+      <div class="detail-wide"><dt>Observations</dt><dd>{{ session.notes|linebreaksbr }}</dd></div>
+    {% endif %}
+  </dl>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Paiements en espèces</h2></div>
+  {% if payments %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Reçu</th><th>Date</th><th>Élève</th><th>Facture</th><th class="numeric">Montant</th><th>Par</th></tr></thead>
+        <tbody>
+          {% for payment in payments %}
+            <tr>
+              <td><a href="{% url 'school:finance_payment_receipt' school.organization.slug school.code payment.id %}">{{ payment.receipt_number }}</a></td>
+              <td>{{ payment.paid_at|date:"d/m/Y" }}</td>
+              <td>{{ payment.invoice.student.full_name }}</td>
+              <td>{{ payment.invoice.number }}</td>
+              <td class="numeric">{{ payment.amount|fcfa }}</td>
+              <td>{{ payment.received_by.get_username|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucun paiement en espèces dans cette session.</div>
+  {% endif %}
+</div>
+{% endblock %}

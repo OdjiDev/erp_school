@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Caisse — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Caisse</h1>
+    <p class="muted">Contrôle des espèces encaissées et clôtures de caisse.</p>
+  </div>
+  <div class="actions">
+    {% if can_manage_finance and not open_session %}
+      <a class="btn" href="{% url 'school:finance_cash_open' school.organization.slug school.code %}">Ouvrir la caisse</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+    <a class="btn btn-secondary" href="{% url 'school:finance_payment_list' school.organization.slug school.code %}">Encaissements</a>
+  </div>
+</div>
+
+{% if open_session %}
+  <section class="card">
+    <div class="card-head">
+      <h2>Caisse ouverte</h2>
+      <span class="badge badge-active">Ouverte</span>
+    </div>
+    <p class="muted">
+      Ouverte le {{ open_session.opened_at|date:"d/m/Y H:i" }}
+      {% if open_session.site %} · {{ open_session.site.name }}{% endif %}
+      {% if open_session.opened_by %} · par {{ open_session.opened_by.get_username }}{% endif %}
+    </p>
+    <div class="stats-grid">
+      <div class="stat">
+        <span class="stat-label">Fonds initial</span>
+        <span class="stat-value stat-value-money">{{ open_session.opening_float|fcfa }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Espèces encaissées</span>
+        <span class="stat-value stat-value-money">{{ open_summary.cash_total|fcfa }}</span>
+        <span class="muted">{{ open_summary.count }} paiement{{ open_summary.count|pluralize }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Total attendu</span>
+        <span class="stat-value stat-value-money">{{ open_summary.expected_cash|fcfa }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Action</span>
+        <div class="form-actions">
+          <a class="btn" href="{% url 'school:finance_cash_detail' school.organization.slug school.code open_session.id %}">Détail</a>
+          {% if can_manage_finance %}
+            <a class="btn btn-secondary" href="{% url 'school:finance_cash_close' school.organization.slug school.code open_session.id %}">Clôturer</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+{% else %}
+  <div class="callout">
+    Aucune caisse n'est ouverte. Les encaissements en espèces sont bloqués.
+    {% if can_manage_finance %}
+      <a href="{% url 'school:finance_cash_open' school.organization.slug school.code %}">Ouvrir la caisse</a>.
+    {% endif %}
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h2>Historique des sessions</h2></div>
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="annee">Année scolaire</label>
+      <select id="annee" name="annee">
+        {% for year in years %}
+          <option value="{{ year.id }}"{% if selected_year and year.id == selected_year.id %} selected{% endif %}>{{ year.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">Afficher</button>
+  </form>
+
+  {% if sessions %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ouverte le</th><th>Site</th><th>Par</th><th class="numeric">Fonds</th><th class="numeric">Attendu</th><th class="numeric">Compté</th><th class="numeric">Écart</th><th>Statut</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for session in sessions %}
+            <tr>
+              <td>{{ session.opened_at|date:"d/m/Y H:i" }}</td>
+              <td>{{ session.site.name|default:"Caisse principale" }}</td>
+              <td>{{ session.opened_by.get_username|default:"—" }}</td>
+              <td class="numeric">{{ session.opening_float|fcfa }}</td>
+              <td class="numeric">{{ session.expected_cash|default_if_none:"—"|fcfa }}</td>
+              <td class="numeric">{{ session.counted_cash|default_if_none:"—"|fcfa }}</td>
+              <td class="numeric">
+                {% if session.difference is not None %}
+                  {{ session.difference|fcfa }}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if session.status == 'open' %}
+                  <span class="badge badge-active">Ouverte</span>
+                {% else %}
+                  <span class="badge badge-inactive">Clôturée</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_cash_detail' school.organization.slug school.code session.id %}">Voir</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucune session de caisse pour cette année.</div>
+  {% endif %}
+</div>
+{% endblock %}

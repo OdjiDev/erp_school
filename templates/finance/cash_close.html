@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Clôturer la caisse — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Clôturer la caisse</h1>
+    <p class="muted">
+      Session ouverte le {{ session.opened_at|date:"d/m/Y H:i" }}
+      {% if session.site %} · {{ session.site.name }}{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-secondary" href="{{ cancel_url }}">Retour</a>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Contrôle des espèces</h2></div>
+    <dl class="detail-grid">
+      <div><dt>Fonds initial</dt><dd class="numeric">{{ session.opening_float|fcfa }}</dd></div>
+      <div><dt>Paiements en espèces</dt><dd class="numeric">{{ summary.cash_total|fcfa }}</dd></div>
+      <div><dt>Nombre de paiements</dt><dd class="numeric">{{ summary.count }}</dd></div>
+      <div><dt>Total attendu</dt><dd class="numeric"><strong>{{ summary.expected_cash|fcfa }}</strong></dd></div>
+    </dl>
+    <p class="muted">
+      Comptez physiquement les espèces, puis saisissez le montant réellement
+      présent dans la caisse. L'écart sera conservé dans l'historique.
+    </p>
+  </section>
+
+  <section class="card structure-form">
+    <div class="card-head"><h2>Saisie de clôture</h2></div>
+    <form method="post">
+      {% csrf_token %}
+      {% include "partials/form_fields.html" with form=form %}
+      <div class="form-actions">
+        <button class="btn" type="submit">Clôturer la caisse</button>
+        <a class="btn btn-secondary" href="{{ cancel_url }}">Annuler</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

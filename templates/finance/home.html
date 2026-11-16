@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Finances — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Finances</h1>
+    <p class="muted">
+      Frais scolaires, factures et encaissements
+      {% if selected_year %} · année {{ selected_year.name }}{% endif %}
+    </p>
+  </div>
+  <div class="actions">
+    {% if can_manage_finance %}
+      <a class="btn" href="{% url 'school:finance_invoice_generate' school.organization.slug school.code %}">Nouvelle facture</a>
+      <a class="btn btn-secondary" href="{% url 'school:finance_fee_create' school.organization.slug school.code %}">Nouveau frais</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:finance_overdue_list' school.organization.slug school.code %}">Impayés</a>
+    <a class="btn btn-secondary" href="{% url 'school:finance_cash_home' school.organization.slug school.code %}">Caisse</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="annee">Année scolaire</label>
+      <select id="annee" name="annee">
+        {% for year in years %}
+          <option value="{{ year.id }}"{% if selected_year and year.id == selected_year.id %} selected{% endif %}>{{ year.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">Afficher</button>
+    <a class="btn btn-secondary" href="{% url 'school:finance_fee_list' school.organization.slug school.code %}?annee={{ selected_year.id }}">Frais</a>
+    <a class="btn btn-secondary" href="{% url 'school:finance_plan_list' school.organization.slug school.code %}?annee={{ selected_year.id }}">Échéanciers</a>
+    <a class="btn btn-secondary" href="{% url 'school:finance_discount_list' school.organization.slug school.code %}?annee={{ selected_year.id }}">Remises</a>
+    <a class="btn btn-secondary" href="{% url 'school:finance_export' school.organization.slug school.code %}">Export comptable</a>
+  </form>
+</div>
+
+{% if selected_year %}
+  <div class="stats-grid">
+    <div class="stat">
+      <span class="stat-label">Total facturé</span>
+      <span class="stat-value stat-value-money">{{ billed|fcfa }}</span>
+      <span class="muted">{{ invoice_count }} facture{{ invoice_count|pluralize }} active{{ invoice_count|pluralize }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Total encaissé</span>
+      <span class="stat-value stat-value-money">{{ collected|fcfa }}</span>
+      <span class="muted">{{ paid_count }} facture{{ paid_count|pluralize }} soldée{{ paid_count|pluralize }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Solde à recouvrer</span>
+      <span class="stat-value stat-value-money">{{ balance|fcfa }}</span>
+      <span class="muted">{{ partial_count }} facture{{ partial_count|pluralize }} partielle{{ partial_count|pluralize }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Impayés échus</span>
+      <span class="stat-value stat-value-money">{{ overdue_total|fcfa }}</span>
+      <span class="muted">{{ overdue_count }} échéance{{ overdue_count|pluralize }} en retard</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head">
+        <h2>Dernières factures</h2>
+        <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_invoice_list' school.organization.slug school.code %}?academic_year={{ selected_year.id }}">Toutes les factures</a>
+      </div>
+      {% if recent_invoices %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Numéro</th><th>Élève</th><th>Total</th><th>Solde</th><th>Statut</th></tr></thead>
+            <tbody>
+              {% for invoice in recent_invoices %}
+                <tr>
+                  <td><a href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">{{ invoice.number }}</a></td>
+                  <td>{{ invoice.student.full_name }}<div class="muted">{{ invoice.enrollment.school_class.display_name|default:"—" }}</div></td>
+                  <td class="numeric">{{ invoice.total|fcfa }}</td>
+                  <td class="numeric">{{ invoice.balance|fcfa }}</td>
+                  <td><span class="badge badge-{{ invoice.status }}">{{ invoice.get_status_display }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">Aucune facture pour cette année.</div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Derniers encaissements</h2>
+        <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_payment_list' school.organization.slug school.code %}?academic_year={{ selected_year.id }}">Tous les encaissements</a>
+      </div>
+      {% if recent_payments %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Reçu</th><th>Élève</th><th>Montant</th></tr></thead>
+            <tbody>
+              {% for payment in recent_payments %}
+                <tr>
+                  <td><a href="{% url 'school:finance_payment_receipt' school.organization.slug school.code payment.id %}">{{ payment.receipt_number }}</a></td>
+                  <td>{{ payment.invoice.student.full_name }}<div class="muted">{{ payment.paid_at|date:"d/m/Y" }} · {{ payment.get_method_display }}</div></td>
+                  <td class="numeric">{{ payment.amount|fcfa }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">Aucun encaissement pour cette année.</div>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>État de la caisse</h2></div>
+    {% if open_session %}
+      <p>
+        <span class="badge badge-active">Ouverte</span>
+        depuis le {{ open_session.opened_at|date:"d/m/Y H:i" }}
+        {% if open_session.site %} · {{ open_session.site.name }}{% endif %}
+      </p>
+      <div class="detail-grid">
+        <div><dt>Fonds initial</dt><dd>{{ open_session.opening_float|fcfa }}</dd></div>
+        <div><dt>Espèces encaissées</dt><dd>{{ open_summary.cash_total|default:0|fcfa }}</dd></div>
+        <div><dt>Total attendu</dt><dd><strong>{{ open_summary.expected_cash|default:0|fcfa }}</strong></dd></div>
+      </div>
+      <div class="form-actions no-print">
+        <a class="btn" href="{% url 'school:finance_cash_detail' school.organization.slug school.code open_session.id %}">Voir la caisse</a>
+        {% if can_manage_finance %}
+          <a class="btn btn-secondary" href="{% url 'school:finance_cash_close' school.organization.slug school.code open_session.id %}">Clôturer</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="callout">
+        Aucune caisse n'est ouverte. Les encaissements en espèces sont bloqués
+        tant que la caisse n'est pas ouverte.
+        {% if can_manage_finance %}
+          <a href="{% url 'school:finance_cash_open' school.organization.slug school.code %}">Ouvrir la caisse</a>.
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+{% else %}
+  <div class="empty">
+    Créez d'abord une année scolaire et des frais pour utiliser le module finances.
+  </div>
+{% endif %}
+{% endblock %}

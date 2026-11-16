@@ -39,6 +39,10 @@
             <a class="nav-link{% if 'grading' in request.resolver_match.url_name or 'assessment' in request.resolver_match.url_name or 'report_card' in request.resolver_match.url_name %} active{% endif %}"
                href="{% url 'school:grading_home' school.organization.slug school.code %}">Notes et bulletins</a>
           {% endif %}
+          {% if request.can_view_finance %}
+            <a class="nav-link{% if 'finance' in request.resolver_match.url_name %} active{% endif %}"
+               href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+          {% endif %}
           {% if request.can_manage_users %}
             <a class="nav-link{% if 'user' in request.resolver_match.url_name or 'membership' in request.resolver_match.url_name or 'teacher' in request.resolver_match.url_name %} active{% endif %}"
                href="{% url 'school:user_list' school.organization.slug school.code %}">Utilisateurs</a>

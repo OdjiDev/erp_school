@@ -33,6 +33,25 @@ TEACHER_ROLES = MANAGEMENT_ROLES
 
 GRADING_ROLES = [*MANAGEMENT_ROLES, Role.TEACHER.value]
 
+FINANCE_VIEW_ROLES = [
+    Role.PLATFORM_ADMIN.value,
+    Role.ORG_ADMIN.value,
+    Role.SCHOOL_ADMIN.value,
+    Role.ACCOUNTANT.value,
+    Role.SECRETARY.value,
+    Role.AUDITOR.value,
+]
+FINANCE_MANAGEMENT_ROLES = [
+    Role.PLATFORM_ADMIN.value,
+    Role.ORG_ADMIN.value,
+    Role.SCHOOL_ADMIN.value,
+    Role.ACCOUNTANT.value,
+]
+FINANCE_COLLECTION_ROLES = [
+    *FINANCE_MANAGEMENT_ROLES,
+    Role.SECRETARY.value,
+]
+
 
 def _user_has_role(user, school, roles):
     if not user.is_authenticated:
@@ -96,6 +115,21 @@ def user_can_manage_teachers(user, school):
 def user_can_manage_grades(user, school):
     """Vérifie que l'utilisateur peut ouvrir les écrans de notes."""
     return _user_has_role(user, school, GRADING_ROLES)
+
+
+def user_can_view_finance(user, school):
+    """Consultation des frais, factures, encaissements et caisses."""
+    return _user_has_role(user, school, FINANCE_VIEW_ROLES)
+
+
+def user_can_manage_finance(user, school):
+    """Gestion des frais, échéanciers, remises, factures et caisses."""
+    return _user_has_role(user, school, FINANCE_MANAGEMENT_ROLES)
+
+
+def user_can_collect_payments(user, school):
+    """Encaissement des paiements (espèces ou mobile money)."""
+    return _user_has_role(user, school, FINANCE_COLLECTION_ROLES)
 
 
 def user_can_manage_grading_settings(user, school):

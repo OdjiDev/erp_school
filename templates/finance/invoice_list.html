@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Factures — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Factures</h1>
+    <p class="muted">{{ total_count }} facture{{ total_count|pluralize }} dans le filtre.</p>
+  </div>
+  <div class="actions">
+    {% if can_manage_finance %}
+      <a class="btn" href="{% url 'school:finance_invoice_generate' school.organization.slug school.code %}">Nouvelle facture</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="{{ form.academic_year.id_for_label }}">{{ form.academic_year.label }}</label>
+      {{ form.academic_year }}
+    </div>
+    <div class="field">
+      <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+      {{ form.status }}
+    </div>
+    <div class="field">
+      <label for="{{ form.school_class.id_for_label }}">{{ form.school_class.label }}</label>
+      {{ form.school_class }}
+    </div>
+    <div class="field">
+      <label for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>
+      {{ form.q }}
+    </div>
+    <div class="checkbox-row">
+      {{ form.overdue }}
+      <label for="{{ form.overdue.id_for_label }}">{{ form.overdue.label }}</label>
+    </div>
+    <button class="btn btn-secondary" type="submit">Filtrer</button>
+    <a class="btn btn-secondary" href="{% url 'school:finance_invoice_list' school.organization.slug school.code %}">Réinitialiser</a>
+  </form>
+  {% if form.errors %}
+    <div class="alert alert-error">Vérifiez les critères de recherche.</div>
+  {% endif %}
+
+  <div class="finance-summary">
+    <span>Sous-total <strong>{{ subtotal|fcfa }}</strong></span>
+    <span>Remises <strong>{{ discount_total|fcfa }}</strong></span>
+    <span>Facturé <strong>{{ total|fcfa }}</strong></span>
+    <span>Encaissé <strong>{{ paid|fcfa }}</strong></span>
+    <span>Solde <strong>{{ balance|fcfa }}</strong></span>
+  </div>
+
+  {% if invoices %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Numéro</th>
+            <th>Date</th>
+            <th>Élève</th>
+            <th>Classe</th>
+            <th>Net</th>
+            <th>Payé</th>
+            <th>Solde</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+            <tr>
+              <td><a href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">{{ invoice.number }}</a></td>
+              <td>{{ invoice.issue_date|date:"d/m/Y" }}</td>
+              <td>
+                <strong>{{ invoice.student.full_name }}</strong>
+                <div class="muted">{{ invoice.student.matricule }}</div>
+              </td>
+              <td>{{ invoice.enrollment.school_class.display_name|default:"—" }}</td>
+              <td class="numeric">{{ invoice.total|fcfa }}</td>
+              <td class="numeric">{{ invoice.paid_total|fcfa }}</td>
+              <td class="numeric">
+                {{ invoice.balance|fcfa }}
+                {% if invoice.overdue_amount %}
+                  <div><span class="badge badge-warning">{{ invoice.overdue_amount|fcfa }} échus</span></div>
+                {% endif %}
+              </td>
+              <td><span class="badge badge-{{ invoice.status }}">{{ invoice.get_status_display }}</span></td>
+              <td class="nowrap">
+                <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">Voir</a>
+                {% if request.can_collect_payments and invoice.status != 'cancelled' and invoice.balance > 0 %}
+                  <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_payment_create' school.organization.slug school.code invoice.id %}">Encaisser</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="{% querystring page=page_obj.previous_page_number %}">Précédent</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="{% querystring page=page_obj.next_page_number %}">Suivant</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      Aucune facture ne correspond à ces critères.
+      {% if can_manage_finance %}
+        <a href="{% url 'school:finance_invoice_generate' school.organization.slug school.code %}">Générer des factures</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

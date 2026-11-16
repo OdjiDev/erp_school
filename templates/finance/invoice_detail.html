@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Facture {{ invoice.number }} — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb no-print">
+  <a href="{% url 'school:finance_invoice_list' school.organization.slug school.code %}?academic_year={{ invoice.academic_year.id }}">← Retour aux factures</a>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1>Facture {{ invoice.number }}</h1>
+    <p class="muted">
+      {{ invoice.student.full_name }} · {{ invoice.academic_year.name }}
+      · <span class="badge badge-{{ invoice.status }}">{{ invoice.get_status_display }}</span>
+    </p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn btn-secondary" href="{% url 'school:finance_invoice_print' school.organization.slug school.code invoice.id %}">Imprimer</a>
+    {% if can_pay %}
+      <a class="btn" href="{% url 'school:finance_payment_create' school.organization.slug school.code invoice.id %}">Encaisser</a>
+    {% endif %}
+    {% if can_cancel %}
+      <a class="btn btn-danger" href="{% url 'school:finance_invoice_cancel' school.organization.slug school.code invoice.id %}">Annuler</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if invoice.status == 'cancelled' %}
+  <div class="alert alert-error">
+    Facture annulée le {{ invoice.cancelled_at|date:"d/m/Y H:i" }}
+    {% if invoice.cancelled_by %}par {{ invoice.cancelled_by.get_username }}{% endif %}.
+    Motif : {{ invoice.cancellation_reason }}
+  </div>
+{% endif %}
+
+{% if can_pay and not open_session %}
+  <div class="callout no-print">
+    Aucune caisse n'est ouverte. Un encaissement en espèces sera refusé.
+    {% if can_manage_finance %}
+      <a href="{% url 'school:finance_cash_open' school.organization.slug school.code %}">Ouvrir la caisse</a>.
+    {% endif %}
+  </div>
+{% endif %}
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Informations</h2></div>
+    <dl class="detail-grid">
+      <div><dt>Élève</dt><dd>{{ invoice.student.full_name }}</dd></div>
+      <div><dt>Matricule</dt><dd>{{ invoice.student.matricule }}</dd></div>
+      <div><dt>Classe</dt><dd>{{ invoice.enrollment.school_class.display_name|default:"—" }}</dd></div>
+      <div><dt>Année scolaire</dt><dd>{{ invoice.academic_year.name }}</dd></div>
+      <div><dt>Date d'émission</dt><dd>{{ invoice.issue_date|date:"d/m/Y" }}</dd></div>
+      <div><dt>Échéance finale</dt><dd>{{ invoice.due_date|date:"d/m/Y" }}</dd></div>
+      <div><dt>Échéancier</dt><dd>{{ invoice.payment_plan.name|default:"—" }}</dd></div>
+      <div><dt>Créée par</dt><dd>{{ invoice.created_by.get_username|default:"—" }}</dd></div>
+      {% if invoice.notes %}
+        <div class="detail-wide"><dt>Notes</dt><dd>{{ invoice.notes|linebreaksbr }}</dd></div>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Montants</h2></div>
+    <dl class="detail-grid">
+      <div><dt>Sous-total</dt><dd class="numeric">{{ invoice.subtotal|fcfa }}</dd></div>
+      <div><dt>Remises</dt><dd class="numeric">− {{ invoice.discount_total|fcfa }}</dd></div>
+      <div><dt>Net à payer</dt><dd class="numeric"><strong>{{ invoice.total|fcfa }}</strong></dd></div>
+      <div><dt>Encaissé</dt><dd class="numeric">{{ invoice.paid_total|fcfa }}</dd></div>
+      <div><dt>Solde</dt><dd class="numeric"><strong>{{ invoice.balance|fcfa }}</strong></dd></div>
+      <div><dt>Impayé échu</dt><dd class="numeric">{{ invoice.overdue_amount|fcfa }}</dd></div>
+    </dl>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Lignes de facture</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Description</th><th>Frais</th><th class="numeric">Montant</th></tr></thead>
+      <tbody>
+        {% for line in lines %}
+          <tr>
+            <td>{{ line.description }}</td>
+            <td>{{ line.fee.name|default:"—" }}</td>
+            <td class="numeric">{{ line.amount|fcfa }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="muted">Aucune ligne.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><th colspan="2">Total</th><th class="numeric">{{ invoice.total|fcfa }}</th></tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+{% if discounts %}
+  <section class="card">
+    <div class="card-head"><h2>Remises appliquées</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Libellé</th><th>Type</th><th>Valeur</th><th class="numeric">Montant</th></tr></thead>
+        <tbody>
+          {% for discount in discounts %}
+            <tr>
+              <td>{{ discount.label }}</td>
+              <td>{{ discount.get_kind_display }}</td>
+              <td>{{ discount.value }}</td>
+              <td class="numeric">− {{ discount.amount|fcfa }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2>Échéances</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Ordre</th><th>Libellé</th><th>Date</th><th class="numeric">Montant</th><th class="numeric">Payé</th><th class="numeric">Solde</th><th>État</th></tr></thead>
+      <tbody>
+        {% for installment in installments %}
+          <tr>
+            <td>{{ installment.sequence }}</td>
+            <td>{{ installment.label }}</td>
+            <td>{{ installment.due_date|date:"d/m/Y" }}</td>
+            <td class="numeric">{{ installment.amount|fcfa }}</td>
+            <td class="numeric">{{ installment.paid_amount|fcfa }}</td>
+            <td class="numeric">{{ installment.balance|fcfa }}</td>
+            <td>
+              {% if installment.balance <= 0 %}
+                <span class="badge badge-active">Réglée</span>
+              {% elif installment.is_overdue %}
+                <span class="badge badge-warning">En retard</span>
+              {% else %}
+                <span class="badge badge-issued">À venir</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="muted">Aucune échéance.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Encaissements</h2></div>
+  {% if payments %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Reçu</th><th>Date</th><th class="numeric">Montant</th><th>Mode</th><th>Référence</th><th>Caissier</th><th>État</th><th class="no-print">Actions</th></tr></thead>
+        <tbody>
+          {% for payment in payments %}
+            <tr>
+              <td><a href="{% url 'school:finance_payment_receipt' school.organization.slug school.code payment.id %}">{{ payment.receipt_number }}</a></td>
+              <td>{{ payment.paid_at|date:"d/m/Y" }}</td>
+              <td class="numeric">{{ payment.amount|fcfa }}</td>
+              <td>{{ payment.get_method_display }}</td>
+              <td>{{ payment.reference|default:"—" }}</td>
+              <td>{{ payment.received_by.get_username|default:"—" }}</td>
+              <td>
+                {% if payment.is_cancelled %}
+                  <span class="badge badge-cancelled">Annulé</span>
+                  <div class="muted">{{ payment.cancellation_reason|truncatechars:50 }}</div>
+                {% else %}
+                  <span class="badge badge-active">Valide</span>
+                {% endif %}
+              </td>
+              <td class="nowrap no-print">
+                {% if can_manage_finance and not payment.is_cancelled %}
+                  <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_payment_cancel' school.organization.slug school.code payment.id %}">Annuler</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">Aucun encaissement pour cette facture.</div>
+  {% endif %}
+</section>
+{% endblock %}

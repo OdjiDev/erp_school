@@ -6,8 +6,11 @@ from django.shortcuts import get_object_or_404
 from apps.common.tenancy import tenant_scope
 
 from .access import (
-    IMPORT_ROLES,
+    FINANCE_COLLECTION_ROLES,
+    FINANCE_MANAGEMENT_ROLES,
+    FINANCE_VIEW_ROLES,
     GRADING_ROLES,
+    IMPORT_ROLES,
     STUDENT_ROLES,
     STRUCTURE_ROLES,
     USER_ROLES,
@@ -43,6 +46,13 @@ def tenant_scoped_view(view):
         request.can_manage_structure = bool(roles.intersection(STRUCTURE_ROLES))
         request.can_manage_users = bool(roles.intersection(USER_ROLES))
         request.can_manage_grades = bool(roles.intersection(GRADING_ROLES))
+        request.can_view_finance = bool(roles.intersection(FINANCE_VIEW_ROLES))
+        request.can_manage_finance = bool(
+            roles.intersection(FINANCE_MANAGEMENT_ROLES)
+        )
+        request.can_collect_payments = bool(
+            roles.intersection(FINANCE_COLLECTION_ROLES)
+        )
         request.can_manage_organization = (
             request.user.is_superuser
             or "platform_admin" in roles

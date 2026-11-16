@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Encaissements — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Encaissements</h1>
+    <p class="muted">{{ total_count }} paiement{{ total_count|pluralize }} dans le filtre.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+    <a class="btn btn-secondary" href="{% url 'school:finance_cash_home' school.organization.slug school.code %}">Caisse</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>
+      {{ form.q }}
+    </div>
+    <div class="field">
+      <label for="{{ form.method.id_for_label }}">{{ form.method.label }}</label>
+      {{ form.method }}
+    </div>
+    <div class="field">
+      <label for="{{ form.academic_year.id_for_label }}">{{ form.academic_year.label }}</label>
+      {{ form.academic_year }}
+    </div>
+    <div class="checkbox-row">
+      {{ form.include_cancelled }}
+      <label for="{{ form.include_cancelled.id_for_label }}">{{ form.include_cancelled.label }}</label>
+    </div>
+    <button class="btn btn-secondary" type="submit">Filtrer</button>
+    <a class="btn btn-secondary" href="{% url 'school:finance_payment_list' school.organization.slug school.code %}">Réinitialiser</a>
+  </form>
+
+  <div class="finance-summary">
+    <span>Total encaissé (hors annulations) <strong>{{ total|fcfa }}</strong></span>
+  </div>
+
+  {% if payments %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Reçu</th><th>Date</th><th>Élève</th><th>Facture</th><th class="numeric">Montant</th><th>Mode</th><th>Référence</th><th>État</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+            <tr>
+              <td><a href="{% url 'school:finance_payment_receipt' school.organization.slug school.code payment.id %}">{{ payment.receipt_number }}</a></td>
+              <td>{{ payment.paid_at|date:"d/m/Y" }}</td>
+              <td>
+                <strong>{{ payment.invoice.student.full_name }}</strong>
+                <div class="muted">{{ payment.invoice.student.matricule }}</div>
+              </td>
+              <td><a href="{% url 'school:finance_invoice_detail' school.organization.slug school.code payment.invoice.id %}">{{ payment.invoice.number }}</a></td>
+              <td class="numeric">{{ payment.amount|fcfa }}</td>
+              <td>{{ payment.get_method_display }}</td>
+              <td>{{ payment.reference|default:"—" }}</td>
+              <td>
+                {% if payment.is_cancelled %}
+                  <span class="badge badge-cancelled">Annulé</span>
+                {% else %}
+                  <span class="badge badge-active">Valide</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                {% if can_manage_finance and not payment.is_cancelled %}
+                  <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_payment_cancel' school.organization.slug school.code payment.id %}">Annuler</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <div class="pagination">
+        {% if page_obj.has_previous %}
+          <a href="{% querystring page=page_obj.previous_page_number %}">Précédent</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="{% querystring page=page_obj.next_page_number %}">Suivant</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty">Aucun encaissement ne correspond à ces critères.</div>
+  {% endif %}
+</div>
+{% endblock %}

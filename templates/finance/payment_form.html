@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Encaissement — {{ invoice.number }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Encaisser une facture</h1>
+    <p class="muted">{{ invoice.number }} · {{ invoice.student.full_name }} · {{ invoice.academic_year.name }}</p>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">Retour à la facture</a>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Situation de la facture</h2></div>
+    <dl class="detail-grid">
+      <div><dt>Élève</dt><dd>{{ invoice.student.full_name }}</dd></div>
+      <div><dt>Classe</dt><dd>{{ invoice.enrollment.school_class.display_name|default:"—" }}</dd></div>
+      <div><dt>Net à payer</dt><dd class="numeric">{{ invoice.total|fcfa }}</dd></div>
+      <div><dt>Déjà encaissé</dt><dd class="numeric">{{ invoice.paid_total|fcfa }}</dd></div>
+      <div><dt>Solde restant</dt><dd class="numeric"><strong>{{ invoice.balance|fcfa }}</strong></dd></div>
+      <div><dt>Statut</dt><dd><span class="badge badge-{{ invoice.status }}">{{ invoice.get_status_display }}</span></dd></div>
+    </dl>
+    {% if not open_session %}
+      <div class="callout">
+        Aucune caisse n'est ouverte : un paiement en espèces sera refusé.
+        {% if can_manage_finance %}
+          <a href="{% url 'school:finance_cash_open' school.organization.slug school.code %}">Ouvrir la caisse</a>.
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="muted">
+        Caisse ouverte depuis le {{ open_session.opened_at|date:"d/m/Y H:i" }}.
+        Les paiements en espèces seront rattachés à cette session.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="card structure-form">
+    <div class="card-head"><h2>Paiement</h2></div>
+    <form method="post">
+      {% csrf_token %}
+      {% include "partials/form_fields.html" with form=form %}
+      <div class="form-actions">
+        <button class="btn" type="submit">Encaisser</button>
+        <a class="btn btn-secondary" href="{% url 'school:finance_invoice_detail' school.organization.slug school.code invoice.id %}">Annuler</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

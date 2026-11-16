@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -9,6 +10,24 @@ from apps.academics.models import (
     SchoolClass,
     Series,
     Subject,
+)
+from apps.finance.models import (
+    CashSession,
+    CashSessionStatus,
+    Discount,
+    DiscountKind,
+    Fee,
+    Invoice,
+    InvoiceStatus,
+    Payment,
+    PaymentMethod,
+    PaymentPlan,
+    PaymentPlanLine,
+)
+from apps.finance.services import (
+    generate_invoice_for_enrollment,
+    open_cash_session,
+    record_payment,
 )
 from apps.students.models import (
     Enrollment,
@@ -64,10 +83,136 @@ STUDENTS = [
     ("Seydou", "Konaté", "M"),
 ]
 
+FEE_AMOUNTS = {
+    "10": Decimal("150000.00"),
+    "11": Decimal("180000.00"),
+    "TLE": Decimal("220000.00"),
+}
+
+
+def _seed_finance(school, year):
+    """Frais, échéancier, remise, factures, caisse et paiements de démonstration."""
+    for level_code, level_name, order in LEVELS:
+        level = Level.all_objects.get(school=school, code=level_code)
+        Fee.all_objects.get_or_create(
+            school=school,
+            academic_year=year,
+            level=level,
+            series=None,
+            name="Frais de scolarité",
+            defaults={
+                "amount": FEE_AMOUNTS[level_code],
+                "description": f"Frais annuels de {level_name}.",
+                "is_active": True,
+            },
+        )
+    Fee.all_objects.get_or_create(
+        school=school,
+        academic_year=year,
+        level=None,
+        series=None,
+        name="Frais d'inscription",
+        defaults={
+            "amount": Decimal("25000.00"),
+            "description": "Frais administratifs d'inscription annuelle.",
+            "is_active": True,
+        },
+    )
+
+    plan, _ = PaymentPlan.all_objects.get_or_create(
+        school=school,
+        academic_year=year,
+        level=None,
+        series=None,
+        name="Paiement en 3 tranches",
+        defaults={"is_active": True},
+    )
+    start_year = year.start_date.year
+    installments = [
+        (1, "1ère tranche", date(start_year, 10, 15), Decimal("40.00")),
+        (2, "2ème tranche", date(start_year + 1, 1, 15), Decimal("30.00")),
+        (3, "3ème tranche", date(start_year + 1, 4, 15), Decimal("30.00")),
+    ]
+    for sequence, label, due_date, percentage in installments:
+        PaymentPlanLine.all_objects.get_or_create(
+            plan=plan,
+            sequence=sequence,
+            defaults={
+                "label": label,
+                "due_date": due_date,
+                "percentage": percentage,
+            },
+        )
+
+    first_student = (
+        Student.all_objects.filter(school=school).order_by("matricule").first()
+    )
+    if first_student is not None:
+        Discount.all_objects.get_or_create(
+            school=school,
+            academic_year=year,
+            student=first_student,
+            label="Bourse d'excellence",
+            defaults={
+                "kind": DiscountKind.PERCENTAGE,
+                "value": Decimal("25.00"),
+                "reason": "Major de promotion — démonstration.",
+                "is_active": True,
+            },
+        )
+
+    enrollments = (
+        Enrollment.all_objects.filter(
+            school=school,
+            academic_year=year,
+            status=EnrollmentStatus.ACTIVE,
+        )
+        .select_related(
+            "student", "school_class__level", "school_class__series"
+        )
+        .order_by("student__last_name", "student__first_name")
+    )
+    for enrollment in enrollments:
+        generate_invoice_for_enrollment(
+            enrollment, issue_date=year.start_date
+        )
+
+    if not CashSession.all_objects.filter(
+        school=school, status=CashSessionStatus.OPEN
+    ).exists():
+        open_cash_session(
+            school,
+            opening_float=Decimal("50000.00"),
+            notes="Caisse de démonstration.",
+        )
+
+    invoices = (
+        Invoice.all_objects.filter(school=school, academic_year=year)
+        .exclude(status=InvoiceStatus.CANCELLED)
+        .order_by("number")[:3]
+    )
+    for invoice in invoices:
+        if invoice.total <= 0:
+            continue
+        if Payment.all_objects.filter(
+            invoice=invoice, cancelled_at__isnull=True
+        ).exists():
+            continue
+        amount = (invoice.total * Decimal("0.50")).quantize(Decimal("0.01"))
+        if amount <= 0:
+            continue
+        record_payment(
+            invoice,
+            amount=amount,
+            method=PaymentMethod.CASH,
+            reference="Démonstration",
+            paid_at=year.start_date,
+            notes="Encaissement partiel de démonstration.",
+        )
+
 
 class Command(BaseCommand):
     help = "Crée un jeu de données de démonstration (deux écoles homonymes)."
-
     @transaction.atomic
     def handle(self, *args, **options):
         organization, _ = Organization.all_objects.get_or_create(
@@ -186,6 +331,7 @@ class Command(BaseCommand):
                     },
                 )
 
+            _seed_finance(school, year)
             schools.append(school)
 
         self.stdout.write(self.style.SUCCESS("Jeu de démonstration prêt."))
@@ -197,7 +343,9 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"- {school.name} [{school.code}] : "
                 f"{Student.all_objects.filter(school=school).count()} élèves, "
-                f"{SchoolClass.all_objects.filter(school=school, academic_year=year).count()} classes"
+                f"{SchoolClass.all_objects.filter(school=school, academic_year=year).count()} classes, "
+                f"{Invoice.all_objects.filter(school=school, academic_year=year).count()} factures, "
+                f"{Payment.all_objects.filter(school=school).count()} encaissements"
             )
         self.stdout.write(
             "Créez un compte d'accès : python manage.py createsuperuser"

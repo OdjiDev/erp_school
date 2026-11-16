@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load finance_tags %}
+
+{% block title %}Échéanciers — {{ school.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Échéanciers</h1>
+    <p class="muted">Répartition des paiements en tranches, avec dates d'échéance.</p>
+  </div>
+  <div class="actions">
+    {% if can_manage_finance %}
+      <a class="btn" href="{% url 'school:finance_plan_create' school.organization.slug school.code %}">Nouvel échéancier</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{% url 'school:finance_home' school.organization.slug school.code %}">Finances</a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <div class="field">
+      <label for="annee">Année scolaire</label>
+      <select id="annee" name="annee">
+        {% for year in years %}
+          <option value="{{ year.id }}"{% if selected_year and year.id == selected_year.id %} selected{% endif %}>{{ year.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary" type="submit">Afficher</button>
+  </form>
+
+  {% if plans %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Échéancier</th><th>Périmètre</th><th>Échéances</th><th>Total</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for plan in plans %}
+            <tr>
+              <td>
+                <strong>{{ plan.name }}</strong>
+                <div class="muted">{{ plan.academic_year.name }}</div>
+              </td>
+              <td>{{ plan.scope_label }}</td>
+              <td>
+                {% for line in plan.lines.all %}
+                  <div>{{ line.sequence }}. {{ line.label }} — {{ line.percentage }} % <span class="muted">({{ line.due_date|date:"d/m/Y" }})</span></div>
+                {% empty %}
+                  <span class="muted">Aucune ligne</span>
+                {% endfor %}
+              </td>
+              <td class="numeric">
+                {{ plan.total_percentage }} %
+                {% if plan.total_percentage != 100 %}
+                  <div><span class="badge badge-warning">À corriger</span></div>
+                {% endif %}
+              </td>
+              <td>
+                {% if plan.is_active %}
+                  <span class="badge badge-active">Actif</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactif</span>
+                {% endif %}
+              </td>
+              <td class="nowrap">
+                {% if can_manage_finance %}
+                  <a class="btn btn-secondary btn-sm" href="{% url 'school:finance_plan_edit' school.organization.slug school.code plan.id %}">Modifier</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      Aucun échéancier pour cette année. La génération de factures exige un
+      échéancier actif dont les pourcentages totalisent 100 %.
+      {% if can_manage_finance %}
+        <a href="{% url 'school:finance_plan_create' school.organization.slug school.code %}">Créer un échéancier</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
