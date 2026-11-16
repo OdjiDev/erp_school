@@ -96,6 +96,75 @@ class StructureManagementTests(TestCase):
             AcademicYear.all_objects.filter(school=self.school).count(), 1
         )
 
+    def test_academic_year_name_format_is_rejected(self):
+        response = self.client.post(
+            self.school_url("structure_year_create"),
+            {
+                "name": "2027/2028",
+                "start_date": "2027-10-01",
+                "end_date": "2028-06-30",
+                "is_current": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "format AAAA-AAAA")
+        self.assertEqual(
+            AcademicYear.all_objects.filter(school=self.school).count(), 1
+        )
+
+    def test_academic_year_name_must_be_consecutive(self):
+        response = self.client.post(
+            self.school_url("structure_year_create"),
+            {
+                "name": "2027-2029",
+                "start_date": "2027-10-01",
+                "end_date": "2029-06-30",
+                "is_current": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "consécutives")
+        self.assertEqual(
+            AcademicYear.all_objects.filter(school=self.school).count(), 1
+        )
+
+    def test_academic_year_name_is_normalized(self):
+        response = self.client.post(
+            self.school_url("structure_year_create"),
+            {
+                "name": " 2027 - 2028 ",
+                "start_date": "2027-10-01",
+                "end_date": "2028-06-30",
+                "is_current": "on",
+            },
+        )
+
+        self.assertRedirects(response, self.school_url())
+        new_year = AcademicYear.all_objects.get(
+            school=self.school, name="2027-2028"
+        )
+        self.assertTrue(new_year.is_current)
+
+    def test_edit_rejects_invalid_academic_year_name(self):
+        response = self.client.post(
+            self.school_url(
+                "structure_year_edit", year_id=self.year.id
+            ),
+            {
+                "name": "2026/2027",
+                "start_date": "2026-10-01",
+                "end_date": "2027-06-30",
+                "is_current": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "format AAAA-AAAA")
+        self.year.refresh_from_db()
+        self.assertEqual(self.year.name, "2026-2027")
+
     def test_edit_academic_year(self):
         response = self.client.post(
             self.school_url(

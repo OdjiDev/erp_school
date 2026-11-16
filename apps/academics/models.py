@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 from django.conf import settings
@@ -6,6 +7,26 @@ from django.db import models
 
 from apps.common.tenancy import TenantModel
 from apps.tenancy.models import School, Site
+
+
+ACADEMIC_YEAR_NAME_PATTERN = re.compile(r"^(\d{4})-(\d{4})$")
+ACADEMIC_YEAR_NAME_FORMAT_ERROR = (
+    "Le nom de l'année doit respecter le format AAAA-AAAA, "
+    "par exemple 2026-2027."
+)
+ACADEMIC_YEAR_CONSECUTIVE_ERROR = (
+    "Les deux années doivent être consécutives, par exemple 2026-2027."
+)
+
+
+def validate_academic_year_name(name):
+    """Vérifie le format AAAA-AAAA et la continuité des deux années."""
+    match = ACADEMIC_YEAR_NAME_PATTERN.fullmatch(name or "")
+    if not match:
+        raise ValidationError(ACADEMIC_YEAR_NAME_FORMAT_ERROR)
+    start_year, end_year = (int(value) for value in match.groups())
+    if end_year != start_year + 1:
+        raise ValidationError(ACADEMIC_YEAR_CONSECUTIVE_ERROR)
 
 
 class AcademicYear(TenantModel):
@@ -31,10 +52,18 @@ class AcademicYear(TenantModel):
         ]
 
     def clean(self):
+        errors = {}
+        if self.name:
+            try:
+                validate_academic_year_name(self.name)
+            except ValidationError as exc:
+                errors["name"] = exc.messages
         if self.start_date and self.end_date and self.start_date >= self.end_date:
-            raise ValidationError(
-                {"end_date": "La date de fin doit être postérieure à la date de début."}
-            )
+            errors["end_date"] = [
+                "La date de fin doit être postérieure à la date de début."
+            ]
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return f"{self.school.code} — {self.name}"

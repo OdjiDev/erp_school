@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 from django import forms
@@ -18,6 +19,7 @@ from .models import (
     Series,
     Site,
     Subject,
+    validate_academic_year_name,
 )
 
 User = get_user_model()
@@ -54,6 +56,12 @@ class AcademicYearForm(forms.ModelForm):
     class Meta:
         model = AcademicYear
         fields = ["name", "start_date", "end_date", "is_current"]
+        labels = {
+            "name": "Année scolaire",
+            "start_date": "Date de début",
+            "end_date": "Date de fin",
+            "is_current": "Année en cours",
+        }
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "date"}),
             "end_date": forms.DateInput(attrs={"type": "date"}),
@@ -62,7 +70,9 @@ class AcademicYearForm(forms.ModelForm):
     def __init__(self, *args, school=None, **kwargs):
         self.school = school
         super().__init__(*args, **kwargs)
-        self.fields["name"].help_text = "Format attendu : 2026-2027."
+        self.fields["name"].help_text = (
+            "Format attendu : AAAA-AAAA, par exemple 2026-2027."
+        )
         if (
             school is not None
             and not self.is_bound
@@ -74,8 +84,10 @@ class AcademicYearForm(forms.ModelForm):
 
     def clean_name(self):
         name = " ".join((self.cleaned_data.get("name") or "").split())
+        name = re.sub(r"\s*[-–—]\s*", "-", name)
         if not name:
             raise ValidationError("Le nom de l'année est obligatoire.")
+        validate_academic_year_name(name)
         if self.school is not None:
             duplicates = AcademicYear.objects.filter(
                 school=self.school, name__iexact=name
