@@ -274,6 +274,43 @@ class ClassManagementTests(AcademicManagementTestBase):
             2,
         )
 
+    def test_class_form_series_are_tagged_with_their_level(self):
+        response = self.client.get(self.url("class_create"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'data-level="{self.level.id}"')
+
+    def test_class_rejects_series_from_another_level(self):
+        other_level = Level.all_objects.create(
+            school=self.school, code="TLE", name="Terminale", order=3
+        )
+        other_series = Series.all_objects.create(
+            level=other_level, code="TSE", name="Sciences Exactes"
+        )
+
+        response = self.client.post(
+            self.url("class_create"),
+            {
+                "academic_year": self.year.id,
+                "level": self.level.id,
+                "series": other_series.id,
+                "section": "A",
+                "name": "",
+                "site": "",
+                "capacity": "100",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "La série doit appartenir au niveau indiqué."
+        )
+        self.assertFalse(
+            SchoolClass.all_objects.filter(
+                school=self.school, series=other_series
+            ).exists()
+        )
+
     def test_duplicate_class_is_rejected(self):
         SchoolClass.all_objects.create(
             school=self.school,

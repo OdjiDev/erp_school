@@ -205,6 +205,21 @@ class SubjectForm(forms.ModelForm):
         return code
 
 
+class SeriesSelect(forms.Select):
+    """Sélecteur de séries exposant le niveau de chaque option au navigateur."""
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        series = getattr(value, "instance", None)
+        if series is not None:
+            option["attrs"]["data-level"] = str(series.level_id)
+        return option
+
+
 class ClassForm(forms.ModelForm):
     class Meta:
         model = SchoolClass
@@ -217,11 +232,21 @@ class ClassForm(forms.ModelForm):
             "site",
             "capacity",
         ]
+        labels = {
+            "academic_year": "Année scolaire",
+            "level": "Niveau",
+            "series": "Série",
+            "section": "Section",
+            "name": "Nom de la classe",
+            "site": "Site",
+            "capacity": "Capacité",
+        }
         help_texts = {
             "section": "Section ou parallèle, par exemple A, B ou C.",
             "name": "Laisser vide pour générer « Niveau Section ».",
             "capacity": "Capacité d'accueil, 100 par défaut.",
         }
+        widgets = {"series": SeriesSelect}
 
     def __init__(self, *args, school=None, **kwargs):
         self.school = school

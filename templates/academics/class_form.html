@@ -11,17 +11,21 @@
     const options = Array.from(seriesSelect.options);
 
     function filterSeries() {
-      const levelOption = levelSelect.options[levelSelect.selectedIndex];
-      const levelLabel = levelOption ? levelOption.textContent.trim() : "";
+      const levelId = levelSelect.value;
       let selectedVisible = false;
 
       options.forEach(function (option) {
         if (!option.value) return;
-        const matches = !levelLabel || option.textContent.indexOf(levelLabel + " —") === 0;
+        const matches = !levelId || option.dataset.level === levelId;
         option.hidden = !matches;
         option.disabled = !matches;
         if (option.selected && matches) selectedVisible = true;
       });
+
+      if (!levelId) {
+        seriesSelect.value = "";
+        return;
+      }
 
       if (!selectedVisible) {
         const firstVisible = options.find(function (option) {
